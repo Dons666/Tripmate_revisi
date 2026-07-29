@@ -10,6 +10,7 @@ use App\Models\PenyediaTravel;
 use App\Models\Travel;
 use App\Models\TravelPlan;
 use App\Models\UserNotification;
+use App\Models\AdminLog;
 use Illuminate\Support\Str;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -202,6 +203,16 @@ class AdminController extends Controller
         $place = new Destinasi();
         $this->fillPlace($place, $data, 'wisata', true);
 
+        AdminLog::record(
+            action: 'create',
+            entityType: 'destinasi',
+            entityId: $place->id,
+            entityName: $place->nama_destinasi,
+            summary: "Menambahkan destinasi wisata baru '{$place->nama_destinasi}'",
+            changes: ['Nama Tempat', 'Kota', 'Kategori', 'Harga Tiket'],
+            location: $place->kota
+        );
+
         return redirect()
             ->route('admin.places.index')
             ->with('success', 'Destinasi berhasil ditambahkan.');
@@ -230,6 +241,16 @@ class AdminController extends Controller
         $data = $this->validatePlaceRequest($request, false);
         $this->fillPlace($destination, $data, 'wisata', false);
 
+        AdminLog::record(
+            action: 'update',
+            entityType: 'destinasi',
+            entityId: $destination->id,
+            entityName: $destination->nama_destinasi,
+            summary: "Mengubah data destinasi wisata '{$destination->nama_destinasi}'",
+            changes: ['Nama Tempat', 'Alamat', 'Harga Tiket', 'Jam Operasional'],
+            location: $destination->kota
+        );
+
         return redirect()
             ->route('admin.destinations.show', $destination)
             ->with('success', 'Destinasi berhasil diperbarui.');
@@ -238,7 +259,19 @@ class AdminController extends Controller
     public function destroyDestination(Destinasi $destination): RedirectResponse
     {
         $this->ensureType($destination, 'wisata');
+        $name = $destination->nama_destinasi;
+        $city = $destination->kota;
+        $id = $destination->id;
         $destination->delete();
+
+        AdminLog::record(
+            action: 'delete',
+            entityType: 'destinasi',
+            entityId: $id,
+            entityName: $name,
+            summary: "Menghapus destinasi wisata '{$name}'",
+            location: $city
+        );
 
         return redirect()
             ->route('admin.places.index')
@@ -258,6 +291,16 @@ class AdminController extends Controller
         $data = $this->validatePlaceRequest($request, true, true);
         $place = new Destinasi();
         $this->fillPlace($place, $data, 'kuliner', true);
+
+        AdminLog::record(
+            action: 'create',
+            entityType: 'kuliner',
+            entityId: $place->id,
+            entityName: $place->nama_destinasi,
+            summary: "Menambahkan tempat kuliner baru '{$place->nama_destinasi}'",
+            changes: ['Nama Tempat', 'Jenis Masakan', 'Kota'],
+            location: $place->kota
+        );
 
         return redirect()
             ->route('admin.places.index')
@@ -287,6 +330,16 @@ class AdminController extends Controller
         $data = $this->validatePlaceRequest($request, false, true);
         $this->fillPlace($culinary, $data, 'kuliner', false);
 
+        AdminLog::record(
+            action: 'update',
+            entityType: 'kuliner',
+            entityId: $culinary->id,
+            entityName: $culinary->nama_destinasi,
+            summary: "Mengubah data tempat kuliner '{$culinary->nama_destinasi}'",
+            changes: ['Nama Tempat', 'Jenis Masakan', 'Alamat'],
+            location: $culinary->kota
+        );
+
         return redirect()
             ->route('admin.culinaries.show', $culinary)
             ->with('success', 'Data kuliner berhasil diperbarui.');
@@ -295,7 +348,19 @@ class AdminController extends Controller
     public function destroyCulinary(Destinasi $culinary): RedirectResponse
     {
         $this->ensureType($culinary, 'kuliner');
+        $name = $culinary->nama_destinasi;
+        $city = $culinary->kota;
+        $id = $culinary->id;
         $culinary->delete();
+
+        AdminLog::record(
+            action: 'delete',
+            entityType: 'kuliner',
+            entityId: $id,
+            entityName: $name,
+            summary: "Menghapus tempat kuliner '{$name}'",
+            location: $city
+        );
 
         return redirect()
             ->route('admin.places.index')
@@ -315,6 +380,16 @@ class AdminController extends Controller
         $data = $this->validatePlaceRequest($request, true);
         $place = new Destinasi();
         $this->fillPlace($place, $data, 'penginapan', true);
+
+        AdminLog::record(
+            action: 'create',
+            entityType: 'penginapan',
+            entityId: $place->id,
+            entityName: $place->nama_destinasi,
+            summary: "Menambahkan tempat penginapan baru '{$place->nama_destinasi}'",
+            changes: ['Nama Tempat', 'Kategori', 'Kota', 'Harga Kamar'],
+            location: $place->kota
+        );
 
         return redirect()
             ->route('admin.places.index')
@@ -344,6 +419,16 @@ class AdminController extends Controller
         $data = $this->validatePlaceRequest($request, false);
         $this->fillPlace($stay, $data, 'penginapan', false);
 
+        AdminLog::record(
+            action: 'update',
+            entityType: 'penginapan',
+            entityId: $stay->id,
+            entityName: $stay->nama_destinasi,
+            summary: "Mengubah data penginapan '{$stay->nama_destinasi}'",
+            changes: ['Nama Tempat', 'Alamat', 'Harga Kamar'],
+            location: $stay->kota
+        );
+
         return redirect()
             ->route('admin.stays.show', $stay)
             ->with('success', 'Data penginapan berhasil diperbarui.');
@@ -352,7 +437,19 @@ class AdminController extends Controller
     public function destroyStay(Destinasi $stay): RedirectResponse
     {
         $this->ensureType($stay, 'penginapan');
+        $name = $stay->nama_destinasi;
+        $city = $stay->kota;
+        $id = $stay->id;
         $stay->delete();
+
+        AdminLog::record(
+            action: 'delete',
+            entityType: 'penginapan',
+            entityId: $id,
+            entityName: $name,
+            summary: "Menghapus tempat penginapan '{$name}'",
+            location: $city
+        );
 
         return redirect()
             ->route('admin.places.index')
@@ -473,7 +570,19 @@ class AdminController extends Controller
 
     public function destroyComment(Rating $comment): RedirectResponse
     {
+        $userName = $comment->user?->name ?? 'Pengguna';
+        $placeName = $comment->destinasi?->nama_destinasi ?? 'Tempat';
+        $id = $comment->id;
         $comment->delete();
+
+        AdminLog::record(
+            action: 'delete',
+            entityType: 'komentar',
+            entityId: $id,
+            entityName: $userName,
+            summary: "Menghapus komentar dari '{$userName}' di {$placeName}",
+            changes: ['Komentar Member']
+        );
 
         return redirect()
             ->route('admin.comments.index')
@@ -490,6 +599,15 @@ class AdminController extends Controller
 
         $user->warning_count = (int) ($user->warning_count ?? 0) + 1;
         $user->save();
+
+        AdminLog::record(
+            action: 'warning',
+            entityType: 'user',
+            entityId: $user->id,
+            entityName: $user->name,
+            summary: "Mengirim peringatan teguran ke pengguna '{$user->name}' (Total Teguran: {$user->warning_count})",
+            changes: ['Teguran Member']
+        );
 
         return back()->with('success', 'Peringatan berhasil dikirim.');
     }
@@ -512,13 +630,22 @@ class AdminController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => $data['username'],
             'email' => $data['email'],
             'password' => $data['password'],
             'role' => $data['role'] === 'member' ? 'user' : $data['role'],
             'is_active' => true,
         ]);
+
+        AdminLog::record(
+            action: 'create',
+            entityType: 'user',
+            entityId: $user->id,
+            entityName: $user->name,
+            summary: "Menambahkan akun pengguna baru '{$user->name}' ({$user->role})",
+            changes: ['Username', 'Email', 'Role', 'Status Akun']
+        );
 
         return back()->with('success', 'Akun pengguna berhasil dibuat.');
     }
@@ -531,6 +658,15 @@ class AdminController extends Controller
 
         $user->password = Hash::make($data['password']);
         $user->save();
+
+        AdminLog::record(
+            action: 'update',
+            entityType: 'user',
+            entityId: $user->id,
+            entityName: $user->name,
+            summary: "Mereset password pengguna '{$user->name}'",
+            changes: ['Password Pengguna']
+        );
 
         return back()->with('success', 'Password pengguna berhasil direset.');
     }
@@ -559,17 +695,38 @@ class AdminController extends Controller
 
         $user->save();
 
+        $statusStr = $user->is_active ? 'mengaktifkan kembali' : 'menonaktifkan';
+        AdminLog::record(
+            action: 'update',
+            entityType: 'user',
+            entityId: $user->id,
+            entityName: $user->name,
+            summary: "Admin {$statusStr} akun pengguna '{$user->name}'",
+            changes: ['Status Akun', 'Alasan Penonaktifan']
+        );
+
         return back()->with('success', 'Status pengguna berhasil diperbarui.');
     }
 
     public function logs()
     {
-        return view('admin.logs.index', [
-            'logs' => new LengthAwarePaginator([], 0, 10, 1, [
+        try {
+            if (Schema::hasTable('admin_logs')) {
+                $logs = AdminLog::with('user')->latest()->paginate(10)->withQueryString();
+            } else {
+                $logs = new LengthAwarePaginator([], 0, 10, 1, [
+                    'path' => request()->url(),
+                    'query' => request()->query(),
+                ]);
+            }
+        } catch (\Throwable $e) {
+            $logs = new LengthAwarePaginator([], 0, 10, 1, [
                 'path' => request()->url(),
                 'query' => request()->query(),
-            ]),
-        ]);
+            ]);
+        }
+
+        return view('admin.logs.index', compact('logs'));
     }
 
     public function appealsIndex(Request $request)
@@ -614,6 +771,16 @@ class AdminController extends Controller
         $appeal->is_read = true;
         $appeal->save();
 
+        $userName = $user?->name ?? ($user?->email ?? $appeal->email);
+        AdminLog::record(
+            action: 'approve',
+            entityType: 'appeal',
+            entityId: $appeal->id,
+            entityName: $userName,
+            summary: "Menyetujui pengajuan banding akun '{$userName}'",
+            changes: ['Status Banding', 'Status Akun Pengguna']
+        );
+
         return back()->with('success', 'Pengajuan banding disetujui. Akun pengguna (' . ($user?->email ?? $appeal->email) . ') telah diaktifkan kembali.');
     }
 
@@ -622,6 +789,16 @@ class AdminController extends Controller
         $appeal->status = 'rejected';
         $appeal->is_read = true;
         $appeal->save();
+
+        $userName = $appeal->user?->name ?? $appeal->email;
+        AdminLog::record(
+            action: 'reject',
+            entityType: 'appeal',
+            entityId: $appeal->id,
+            entityName: $userName,
+            summary: "Menolak pengajuan banding akun '{$userName}'",
+            changes: ['Status Banding']
+        );
 
         return back()->with('success', 'Pengajuan banding telah ditolak.');
     }
@@ -702,15 +879,33 @@ class AdminController extends Controller
         $place->hari_operasional = $this->serializeSchedule($data['operational_schedule'] ?? []);
 
         if (!empty($data['image_url'])) {
-            $place->gambar = $data['image_url'];
-        } elseif (!empty($data['image_files'])) {
+            $place->gambar = trim($data['image_url']);
+        } elseif (!empty($data['image_files']) && is_array($data['image_files'])) {
             $paths = [];
-
-            foreach ($data['image_files'] as $image) {
-                $paths[] = $image->store('destinasi-images', 'public');
+            $dir = storage_path('app/public/destinasi-images');
+            if (!file_exists($dir)) {
+                @mkdir($dir, 0755, true);
             }
 
-            $place->gambar = json_encode($paths);
+            foreach ($data['image_files'] as $image) {
+                if ($image && $image->isValid()) {
+                    $storedPath = $image->store('destinasi-images', 'public');
+                    $paths[] = $storedPath;
+
+                    // Dual-store copy to public_path
+                    try {
+                        $publicCopy = public_path('storage/' . $storedPath);
+                        @mkdir(dirname($publicCopy), 0755, true);
+                        @copy(storage_path('app/public/' . $storedPath), $publicCopy);
+                    } catch (\Throwable $e) {}
+                }
+            }
+
+            if (count($paths) === 1) {
+                $place->gambar = $paths[0];
+            } elseif (count($paths) > 1) {
+                $place->gambar = json_encode($paths);
+            }
         } elseif ($isCreate) {
             $place->gambar = $place->gambar ?: null;
         }
@@ -874,7 +1069,7 @@ class AdminController extends Controller
             $validated['ktp_pemilik'] = $request->input('ktp_pemilik');
         }
 
-        PenyediaTravel::create(array_merge($validated, ['status' => 'approved']));
+        $penyedia = PenyediaTravel::create(array_merge($validated, ['status' => 'approved']));
 
         User::updateOrCreate(
             ['email' => $validated['email']],
@@ -884,6 +1079,16 @@ class AdminController extends Controller
                 'role' => 'travel',
                 'is_active' => true,
             ]
+        );
+
+        AdminLog::record(
+            action: 'create',
+            entityType: 'penyedia_travel',
+            entityId: $penyedia->id,
+            entityName: $validated['nama_travel'],
+            summary: "Menambahkan dan menyetujui penyedia travel baru '{$validated['nama_travel']}'",
+            changes: ['Nama Travel', 'Email', 'Kendaraan', 'Status Approved'],
+            location: $validated['kota_asal_travel']
         );
 
         return redirect()->route('admin.penyedia-travel.index')->with('success', 'Data penyedia travel berhasil ditambahkan dan disetujui!');
@@ -924,6 +1129,16 @@ class AdminController extends Controller
             );
         }
 
+        AdminLog::record(
+            action: 'approve',
+            entityType: 'penyedia_travel',
+            entityId: $penyediaTravel->id,
+            entityName: $penyediaTravel->nama_travel,
+            summary: "Menyetujui (ACC) pendaftaran penyedia travel '{$penyediaTravel->nama_travel}'",
+            changes: ['Status Pendaftaran'],
+            location: $penyediaTravel->kota_asal_travel
+        );
+
         return redirect()->route('admin.penyedia-travel.index')->with('success', "Penyedia travel '{$penyediaTravel->nama_travel}' telah disetujui (ACC) dan berhasil ditambahkan ke daftar paket travel!");
     }
 
@@ -937,6 +1152,16 @@ class AdminController extends Controller
         if ($penyediaTravel->email) {
             User::where('email', $penyediaTravel->email)->update(['is_active' => false]);
         }
+
+        AdminLog::record(
+            action: 'reject',
+            entityType: 'penyedia_travel',
+            entityId: $penyediaTravel->id,
+            entityName: $penyediaTravel->nama_travel,
+            summary: "Menolak pendaftaran penyedia travel '{$penyediaTravel->nama_travel}'",
+            changes: ['Status Pendaftaran'],
+            location: $penyediaTravel->kota_asal_travel
+        );
 
         return redirect()->route('admin.penyedia-travel.index')->with('success', "Penyedia travel '{$penyediaTravel->nama_travel}' telah ditolak!");
     }
@@ -991,6 +1216,16 @@ class AdminController extends Controller
 
         $penyediaTravel->update($validated);
 
+        AdminLog::record(
+            action: 'update',
+            entityType: 'penyedia_travel',
+            entityId: $penyediaTravel->id,
+            entityName: $penyediaTravel->nama_travel,
+            summary: "Mengubah data penyedia travel '{$penyediaTravel->nama_travel}'",
+            changes: ['Informasi Travel', 'Kontak'],
+            location: $penyediaTravel->kota_asal_travel
+        );
+
         return redirect()->route('admin.penyedia-travel.index')->with('success', 'Data penyedia travel berhasil diperbarui!');
     }
 
@@ -999,7 +1234,19 @@ class AdminController extends Controller
      */
     public function penyediaTravelDestroy(PenyediaTravel $penyediaTravel)
     {
+        $name = $penyediaTravel->nama_travel;
+        $city = $penyediaTravel->kota_asal_travel;
+        $id = $penyediaTravel->id;
         $penyediaTravel->delete();
+
+        AdminLog::record(
+            action: 'delete',
+            entityType: 'penyedia_travel',
+            entityId: $id,
+            entityName: $name,
+            summary: "Menghapus data penyedia travel '{$name}'",
+            location: $city
+        );
 
         return redirect()->route('admin.penyedia-travel.index')->with('success', 'Data penyedia travel berhasil dihapus!');
     }
@@ -1108,6 +1355,15 @@ class AdminController extends Controller
             );
         }
 
+        AdminLog::record(
+            action: 'verify',
+            entityType: 'escrow',
+            entityId: $travelPlan->id,
+            entityName: $travelPlan->nama_perjalanan,
+            summary: "Memverifikasi pembayaran paket travel '{$travelPlan->nama_perjalanan}' (Dana Escrow: Rp " . number_format($travelPlan->budget, 0, ',', '.') . ")",
+            changes: ['Status Pembayaran', 'Status Escrow']
+        );
+
         return back()->with('success', 'Bukti pembayaran berhasil diverifikasi! Dana masuk ke status Escrow.');
     }
 
@@ -1145,6 +1401,15 @@ class AdminController extends Controller
             '✅ Transaksi Perjalanan Selesai Sepenuhnya',
             'Seluruh proses perjalanan tur Anda bersama "' . ($travelPlan->travel->nama_travel ?? 'Travel') . '" telah selesai dan dana telah resmi disalurkan oleh Admin.',
             'info'
+        );
+
+        AdminLog::record(
+            action: 'verify',
+            entityType: 'escrow',
+            entityId: $travelPlan->id,
+            entityName: $travelPlan->nama_perjalanan,
+            summary: "Mencairkan dana Escrow sebesar Rp {$amount} ke Agen Travel '{$travelPlan->travel->nama_travel}'",
+            changes: ['Status Pencairan Escrow', 'Waktu Pencairan']
         );
 
         return back()->with('success', 'Dana Escrow sebesar Rp ' . $amount . ' berhasil disalurkan dari Admin ke Agen Travel!');

@@ -57,7 +57,9 @@ class TravelPlan extends Model
 
     public function destinasis()
     {
-        return $this->belongsToMany(Destinasi::class, 'travel_plan_destinasi');
+        return $this->belongsToMany(Destinasi::class, 'travel_plan_destinasi')
+            ->withPivot('id')
+            ->orderBy('travel_plan_destinasi.id', 'asc');
     }
 
     public function expenses()

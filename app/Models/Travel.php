@@ -41,7 +41,9 @@ class Travel extends Model
 
     public function destinasis()
     {
-        return $this->belongsToMany(Destinasi::class, 'destinasi_travel');
+        return $this->belongsToMany(Destinasi::class, 'destinasi_travel')
+            ->withPivot('id')
+            ->orderBy('destinasi_travel.id', 'asc');
     }
 
     public function travelPlans()
