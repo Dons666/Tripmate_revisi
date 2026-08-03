@@ -66,6 +66,37 @@ class TravelPlanController extends Controller
     }
 
     /**
+     * Update rincian anggaran travel plan.
+     */
+    public function update(Request $request, string $id)
+    {
+        $plan = TravelPlan::where('user_id', $request->user()->id)
+            ->findOrFail($id);
+
+        $request->validate([
+            'nama_perjalanan' => 'nullable|string|max:255',
+            'budget' => 'nullable|numeric|min:0',
+            'estimasi_makan_per_orang' => 'nullable|numeric|min:0',
+            'estimasi_transport_per_orang' => 'nullable|numeric|min:0',
+            'jumlah_peserta' => 'nullable|integer|min:1',
+        ]);
+
+        $plan->update($request->only([
+            'nama_perjalanan',
+            'budget',
+            'estimasi_makan_per_orang',
+            'estimasi_transport_per_orang',
+            'jumlah_peserta',
+        ]));
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => 'Rincian anggaran berhasil diperbarui!',
+            'plan'    => $plan,
+        ]);
+    }
+
+    /**
      * Hapus travel plan.
      */
     public function destroy(Request $request, string $id)
@@ -121,6 +152,35 @@ class TravelPlanController extends Controller
         return response()->json([
             'status'  => 'success',
             'message' => 'Destinasi dihapus dari rencana.',
+        ]);
+    }
+
+    /**
+     * Mengubah status kunjungan (checked/visited) destinasi dalam rencana perjalanan.
+     */
+    public function toggleVisited(Request $request, string $planId, string $destinasiId)
+    {
+        $plan = TravelPlan::where('user_id', $request->user()->id)->findOrFail($planId);
+
+        $pivot = $plan->destinasis()->where('destinasi_id', $destinasiId)->first();
+        if (!$pivot) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Destinasi tidak ditemukan dalam rencana perjalanan ini.',
+            ], 404);
+        }
+
+        $currentStatus = (bool) $pivot->pivot->is_visited;
+        $newStatus = !$currentStatus;
+
+        $plan->destinasis()->updateExistingPivot($destinasiId, [
+            'is_visited' => $newStatus
+        ]);
+
+        return response()->json([
+            'status'  => 'success',
+            'message' => $newStatus ? 'Destinasi ditandai telah dikunjungi!' : 'Tanda kunjungan destinasi dihapus.',
+            'is_visited' => $newStatus
         ]);
     }
 

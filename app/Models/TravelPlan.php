@@ -27,6 +27,9 @@ class TravelPlan extends Model
         'trip_ended_at',
         'payout_released_at',
         'foto_sampul',
+        'estimasi_makan_per_orang',
+        'estimasi_transport_per_orang',
+        'total_cost',
     ];
 
     protected $casts = [
@@ -58,7 +61,7 @@ class TravelPlan extends Model
     public function destinasis()
     {
         return $this->belongsToMany(Destinasi::class, 'travel_plan_destinasi')
-            ->withPivot('id')
+            ->withPivot('id', 'is_visited')
             ->orderBy('travel_plan_destinasi.id', 'asc');
     }
 

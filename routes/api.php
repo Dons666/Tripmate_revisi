@@ -70,6 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('travel-plans',              [TravelPlanController::class, 'index']);
     Route::post('travel-plans',             [TravelPlanController::class, 'store']);
     Route::get('travel-plans/{id}',         [TravelPlanController::class, 'show']);
+    Route::put('travel-plans/{id}',         [TravelPlanController::class, 'update']);
     Route::delete('travel-plans/{id}',      [TravelPlanController::class, 'destroy']);
     Route::post('travel-plans/{id}/complete', [TravelPlanController::class, 'complete']);
     Route::post(
@@ -80,6 +81,7 @@ Route::middleware('auth:sanctum')->group(function () {
         'travel-plans/{planId}/destinasi/{destinasiId}',
         [TravelPlanController::class, 'removeDestinasi']
     );
+    Route::post('travel-plans/{planId}/destinasi/{destinasiId}/toggle-visited', [TravelPlanController::class, 'toggleVisited']);
 
     // Travels (List & Detail)
     Route::get('travels',                  [TravelController::class, 'index']);
@@ -99,6 +101,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Schedules
     Route::get('travel-plans/{planId}/schedules',          [ScheduleController::class, 'index']);
     Route::post('travel-plans/{planId}/schedules',         [ScheduleController::class, 'store']);
+    Route::put('travel-plans/{planId}/schedules/{id}',     [ScheduleController::class, 'update']);
     Route::delete('travel-plans/{planId}/schedules/{id}',  [ScheduleController::class, 'destroy']);
 
     // Rating & Review (submit/update — auth)
