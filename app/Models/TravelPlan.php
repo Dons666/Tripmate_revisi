@@ -6,13 +6,15 @@ use Illuminate\Database\Eloquent\Model;
 
 class TravelPlan extends Model
 {
+    protected $primaryKey = 'id_perencanaan';
+
     protected $fillable = [
-        'user_id',
+        'id_user',
         'travel_id',
         'nama_perjalanan',
         'tujuan',
         'catatan',
-        'tanggal_mulai',
+        'tanggal_berangkat',
         'tanggal_selesai',
         'budget',
         'jumlah_peserta',
@@ -30,18 +32,32 @@ class TravelPlan extends Model
         'estimasi_makan_per_orang',
         'estimasi_transport_per_orang',
         'total_cost',
+        'schedules_json',
     ];
 
     protected $casts = [
-        'user_id'            => 'integer',
+        'id_user'            => 'integer',
         'travel_id'          => 'integer',
-        'tanggal_mulai'      => 'date',
+        'tanggal_berangkat'  => 'date',
         'tanggal_selesai'    => 'date',
         'is_checkout'        => 'boolean',
         'trip_started_at'    => 'datetime',
         'trip_ended_at'      => 'datetime',
         'payout_released_at' => 'datetime',
+        'schedules_json'     => 'array',
     ];
+
+    protected $appends = ['destinasis', 'schedules', 'total_expenses', 'tanggal_mulai'];
+
+    public function getTanggalMulaiAttribute()
+    {
+        return $this->tanggal_berangkat;
+    }
+
+    public function setTanggalMulaiAttribute($value)
+    {
+        $this->attributes['tanggal_berangkat'] = $value;
+    }
 
     public function getTotalExpensesAttribute()
     {
@@ -50,7 +66,7 @@ class TravelPlan extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'id_user', 'id_user');
     }
 
     public function travel()
@@ -58,21 +74,68 @@ class TravelPlan extends Model
         return $this->belongsTo(Travel::class);
     }
 
-    public function destinasis()
-    {
-        return $this->belongsToMany(Destinasi::class, 'travel_plan_destinasi')
-            ->withPivot('id', 'is_visited')
-            ->orderBy('travel_plan_destinasi.id', 'asc');
-    }
-
     public function expenses()
     {
-        return $this->hasMany(Expense::class);
+        return $this->hasMany(Expense::class, 'travel_plan_id', 'id_perencanaan');
     }
 
-    public function schedules()
+    /**
+     * Aksesor dinamis untuk mendapatkan daftar destinasi dari kolom JSON.
+     */
+    public function getDestinasisAttribute()
     {
-        return $this->hasMany(Schedule::class)->orderBy('tanggal')->orderBy('jam_mulai');
+        $schedules = $this->schedules_json ?: [];
+        $destinasiIds = collect($schedules)->pluck('destinasi_id')->unique();
+        if ($destinasiIds->isEmpty()) {
+            return collect();
+        }
+
+        $destinations = Destinasi::whereIn('id', $destinasiIds)->get()->keyBy('id');
+
+        return collect($schedules)->map(function ($item) use ($destinations) {
+            $dest = $destinations->get($item['destinasi_id']);
+            if ($dest) {
+                $clone = clone $dest;
+                $clone->setRelation('pivot', (object)[
+                    'is_visited' => $item['is_visited'] ?? false,
+                    'tanggal' => $item['tanggal'] ?? null,
+                    'jam_mulai' => $item['jam_mulai'] ?? null,
+                    'jam_selesai' => $item['jam_selesai'] ?? null,
+                    'catatan' => $item['catatan'] ?? null,
+                ]);
+                return $clone;
+            }
+            return null;
+        })->filter()->values();
+    }
+
+    /**
+     * Aksesor dinamis untuk mensimulasikan jadwal (Schedule) dari data kolom JSON.
+     */
+    public function getSchedulesAttribute()
+    {
+        $schedules = $this->schedules_json ?: [];
+        $destinasiIds = collect($schedules)->pluck('destinasi_id')->unique();
+        $destinations = Destinasi::whereIn('id', $destinasiIds)->get()->keyBy('id');
+
+        return collect($schedules)->map(function ($item, $index) use ($destinations) {
+            $dest = $destinations->get($item['destinasi_id']);
+
+            $sch = new Schedule([
+                'id_jadwal' => $index + 1,
+                'id_perencanaan' => $this->id_perencanaan,
+                'id_destinasi' => $item['destinasi_id'],
+                'tanggal' => $item['tanggal'] ?? null,
+                'jam_mulai' => $item['jam_mulai'] ?? null,
+                'jam_selesai' => $item['jam_selesai'] ?? null,
+                'deskripsi' => $item['catatan'] ?? null,
+            ]);
+
+            if ($dest) {
+                $sch->setRelation('destinasi', $dest);
+            }
+
+            return $sch;
+        })->values();
     }
 }
-

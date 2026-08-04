@@ -1309,7 +1309,7 @@ class AdminController extends Controller
     {
         $escrowPlans = TravelPlan::whereNotNull('travel_id')
             ->where('is_checkout', true)
-            ->with(['user', 'travel', 'destinasis'])
+            ->with(['user', 'travel'])
             ->orderByDesc('updated_at')
             ->get();
 

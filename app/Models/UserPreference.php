@@ -11,8 +11,10 @@ class UserPreference extends Model
 
     protected $table = 'user_preferences';
 
+    protected $primaryKey = 'id_user_preferences';
+
     protected $fillable = [
-        'user_id',
+        'id_user',
         'kota_preferensi',
         'minat_wisata',
         'hidden_gem',
@@ -27,8 +29,21 @@ class UserPreference extends Model
         ];
     }
 
+    /**
+     * Alias user_id ke id_user
+     */
+    public function getUserIdAttribute()
+    {
+        return $this->id_user;
+    }
+
+    public function setUserIdAttribute($value)
+    {
+        $this->attributes['id_user'] = $value;
+    }
+
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'id_user', 'id_user');
     }
 }

@@ -22,7 +22,7 @@ class AuthController extends Controller
         ]);
 
         $user = User::create([
-            'name'     => $request->name,
+            'username' => $request->name,
             'email'    => $request->email,
             'password' => $request->password, // Model cast 'hashed' otomatis hash ini
             'role'     => 'user',

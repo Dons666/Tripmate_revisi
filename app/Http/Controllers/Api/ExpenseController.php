@@ -15,7 +15,7 @@ class ExpenseController extends Controller
     public function index(Request $request)
     {
         $query = Expense::whereHas('travelPlan', function ($q) use ($request) {
-                $q->where('user_id', $request->user()->id);
+                $q->where('id_user', $request->user()->id_user);
             })
             ->with('travelPlan')
             ->latest();
@@ -37,15 +37,15 @@ class ExpenseController extends Controller
             'jumlah'           => 'required|numeric|min:0',
             'kategori'         => 'nullable|string',
             'tanggal'          => 'nullable|date',
-            'travel_plan_id'   => 'required|exists:travel_plans,id',
+            'travel_plan_id'   => 'required|exists:travel_plans,id_perencanaan',
         ]);
 
         // Pastikan travel_plan_id milik user ini
-        TravelPlan::where('user_id', $request->user()->id)
+        TravelPlan::where('id_user', $request->user()->id_user)
             ->findOrFail($request->travel_plan_id);
 
         $expense = Expense::create([
-            'user_id'          => $request->user()->id,
+            'user_id'          => $request->user()->id_user,
             'travel_plan_id'   => $request->travel_plan_id,
             'nama_pengeluaran' => $request->nama_pengeluaran,
             'jumlah'           => $request->jumlah,
@@ -66,7 +66,7 @@ class ExpenseController extends Controller
     public function destroy(Request $request, string $id)
     {
         $expense = Expense::whereHas('travelPlan', function ($q) use ($request) {
-                $q->where('user_id', $request->user()->id);
+                $q->where('id_user', $request->user()->id_user);
             })
             ->findOrFail($id);
 

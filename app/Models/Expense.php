@@ -22,6 +22,6 @@ class Expense extends Model
 
     public function travelPlan()
     {
-        return $this->belongsTo(TravelPlan::class);
+        return $this->belongsTo(TravelPlan::class, 'travel_plan_id', 'id_perencanaan');
     }
 }

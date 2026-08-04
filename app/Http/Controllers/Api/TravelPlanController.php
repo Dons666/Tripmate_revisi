@@ -4,19 +4,18 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\TravelPlan;
+use App\Models\Destinasi;
 use Illuminate\Http\Request;
 
 class TravelPlanController extends Controller
 {
     /**
-     * List semua travel plan milik user.
+     * List travel plans milik user.
      */
     public function index(Request $request)
     {
-        $plans = $request->user()
-            ->travelPlans()
-            ->with('destinasis', 'expenses')
-            ->latest()
+        $plans = TravelPlan::where('id_user', $request->user()->id_user)
+            ->with(['travel'])
             ->get();
 
         return response()->json($plans);
@@ -58,8 +57,8 @@ class TravelPlanController extends Controller
      */
     public function show(Request $request, string $id)
     {
-        $plan = TravelPlan::with(['destinasis', 'expenses', 'schedules.destinasi:id,nama_destinasi,kota,gambar', 'travel.destinasis'])
-            ->where('user_id', $request->user()->id)
+        $plan = TravelPlan::with(['expenses', 'travel.destinasis'])
+            ->where('id_user', $request->user()->id_user)
             ->findOrFail($id);
 
         return response()->json($plan);
@@ -70,7 +69,7 @@ class TravelPlanController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        $plan = TravelPlan::where('user_id', $request->user()->id)
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)
             ->findOrFail($id);
 
         $request->validate([
@@ -79,15 +78,31 @@ class TravelPlanController extends Controller
             'estimasi_makan_per_orang' => 'nullable|numeric|min:0',
             'estimasi_transport_per_orang' => 'nullable|numeric|min:0',
             'jumlah_peserta' => 'nullable|integer|min:1',
+            'tanggal_mulai' => 'nullable|date',
+            'tanggal_selesai' => 'nullable|date|after_or_equal:tanggal_mulai',
+            'jam_mulai' => 'nullable|string',
         ]);
 
-        $plan->update($request->only([
-            'nama_perjalanan',
-            'budget',
-            'estimasi_makan_per_orang',
-            'estimasi_transport_per_orang',
-            'jumlah_peserta',
-        ]));
+        $plan->update([
+            'nama_perjalanan' => $request->nama_perjalanan ?? $plan->nama_perjalanan,
+            'budget' => $request->budget ?? $plan->budget,
+            'estimasi_makan_per_orang' => $request->estimasi_makan_per_orang ?? $plan->estimasi_makan_per_orang,
+            'estimasi_transport_per_orang' => $request->estimasi_transport_per_orang ?? $plan->estimasi_transport_per_orang,
+            'jumlah_peserta' => $request->jumlah_peserta ?? $plan->jumlah_peserta,
+            'tanggal_berangkat' => $request->tanggal_mulai ?? $plan->tanggal_berangkat,
+            'tanggal_selesai' => $request->tanggal_mulai ?? $plan->tanggal_selesai,
+        ]);
+
+        if ($request->filled('tanggal_mulai')) {
+            $schedules = $plan->schedules_json ?: [];
+            foreach ($schedules as $idx => &$item) {
+                $item['tanggal'] = $request->tanggal_mulai;
+                if ($idx === 0 && $request->filled('jam_mulai')) {
+                    $item['jam_mulai'] = $request->jam_mulai;
+                }
+            }
+            $plan->update(['schedules_json' => $schedules]);
+        }
 
         return response()->json([
             'status'  => 'success',
@@ -101,7 +116,7 @@ class TravelPlanController extends Controller
      */
     public function destroy(Request $request, string $id)
     {
-        $plan = TravelPlan::where('user_id', $request->user()->id)
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)
             ->findOrFail($id);
 
         $plan->delete();
@@ -121,17 +136,29 @@ class TravelPlanController extends Controller
             'destinasi_id' => 'required|exists:destinasi,id',
         ]);
 
-        $plan = TravelPlan::where('user_id', $request->user()->id)
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)
             ->findOrFail($planId);
 
-        if ($plan->destinasis()->where('destinasi_id', $request->destinasi_id)->exists()) {
+        $schedules = $plan->schedules_json ?: [];
+
+        $exists = collect($schedules)->contains('destinasi_id', $request->destinasi_id);
+        if ($exists) {
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Destinasi sudah ada di rencana ini.',
             ], 422);
         }
 
-        $plan->destinasis()->attach($request->destinasi_id);
+        $schedules[] = [
+            'destinasi_id' => (int) $request->destinasi_id,
+            'is_visited' => false,
+            'tanggal' => null,
+            'jam_mulai' => null,
+            'jam_selesai' => null,
+            'catatan' => null,
+        ];
+
+        $plan->update(['schedules_json' => $schedules]);
 
         return response()->json([
             'status'  => 'success',
@@ -144,10 +171,15 @@ class TravelPlanController extends Controller
      */
     public function removeDestinasi(Request $request, string $planId, string $destinasiId)
     {
-        $plan = TravelPlan::where('user_id', $request->user()->id)
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)
             ->findOrFail($planId);
 
-        $plan->destinasis()->detach($destinasiId);
+        $schedules = $plan->schedules_json ?: [];
+        $schedules = collect($schedules)->filter(function ($item) use ($destinasiId) {
+            return $item['destinasi_id'] != $destinasiId;
+        })->values()->toArray();
+
+        $plan->update(['schedules_json' => $schedules]);
 
         return response()->json([
             'status'  => 'success',
@@ -160,22 +192,29 @@ class TravelPlanController extends Controller
      */
     public function toggleVisited(Request $request, string $planId, string $destinasiId)
     {
-        $plan = TravelPlan::where('user_id', $request->user()->id)->findOrFail($planId);
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)->findOrFail($planId);
 
-        $pivot = $plan->destinasis()->where('destinasi_id', $destinasiId)->first();
-        if (!$pivot) {
+        $schedules = $plan->schedules_json ?: [];
+        $found = false;
+        $newStatus = false;
+
+        foreach ($schedules as &$item) {
+            if ($item['destinasi_id'] == $destinasiId) {
+                $item['is_visited'] = !($item['is_visited'] ?? false);
+                $newStatus = $item['is_visited'];
+                $found = true;
+                break;
+            }
+        }
+
+        if (!$found) {
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Destinasi tidak ditemukan dalam rencana perjalanan ini.',
             ], 404);
         }
 
-        $currentStatus = (bool) $pivot->pivot->is_visited;
-        $newStatus = !$currentStatus;
-
-        $plan->destinasis()->updateExistingPivot($destinasiId, [
-            'is_visited' => $newStatus
-        ]);
+        $plan->update(['schedules_json' => $schedules]);
 
         return response()->json([
             'status'  => 'success',
@@ -194,7 +233,7 @@ class TravelPlanController extends Controller
             'jumlah_peserta' => 'nullable|integer|min:1',
         ]);
 
-        $plan = TravelPlan::where('user_id', $request->user()->id)
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)
             ->findOrFail($id);
 
         $plan->update([
@@ -216,7 +255,7 @@ class TravelPlanController extends Controller
      */
     public function checkoutTravel(Request $request, string $id)
     {
-        $plan = TravelPlan::where('user_id', $request->user()->id)
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)
             ->findOrFail($id);
 
         if (!$plan->travel_id) {
@@ -289,7 +328,7 @@ class TravelPlanController extends Controller
      */
     public function complete(Request $request, string $id)
     {
-        $plan = TravelPlan::where('user_id', $request->user()->id)
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)
             ->findOrFail($id);
 
         $plan->update(['status' => 'Selesai']);

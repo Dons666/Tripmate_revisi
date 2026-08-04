@@ -10,8 +10,8 @@ return new class extends Migration
     {
         Schema::create('jarak_destinasi', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('asal_id')->constrained('destinasi')->cascadeOnDelete();
-            $table->foreignId('tujuan_id')->constrained('destinasi')->cascadeOnDelete();
+            $table->unsignedBigInteger('asal_id');
+            $table->unsignedBigInteger('tujuan_id');
             $table->double('jarak')->comment('dalam kilometer');
             $table->integer('durasi')->comment('dalam detik');
             $table->timestamps();

@@ -18,7 +18,7 @@ class BudgetRecommendationService
      * @param  string|null $kota      Filter kota (e.g. 'Bandung')
      * @return array
      */
-    public function recommend($budget, $kategori = null, $kota = null): array
+    public function recommend($budget, $kategori = null, $kota = null, $jumlah_orang = 1): array
     {
         $query = Destinasi::query();
 
@@ -32,10 +32,7 @@ class BudgetRecommendationService
             $query->where('kota', 'LIKE', '%' . $kota . '%');
         }
 
-        // Hanya destinasi yang harga tiket-nya <= budget
-        $query->where('harga', '<=', $budget);
-
-        // Urutkan dari yang termurah agar budget terpakai secara efisien
+        // Urutkan dari yang termurah (berdasarkan harga tiket) agar budget terpakai secara efisien
         $query->orderBy('harga', 'asc');
 
         $destinations = $query
@@ -49,13 +46,21 @@ class BudgetRecommendationService
 
         // Akumulasi biaya hingga budget habis
         $selectedDestinations = collect();
-        $accumulatedCost      = 0.0;
+        $biayaMakanFlatPerTrip = 30000 * $jumlah_orang;
         $maxBudget            = (float) $budget;
+        
+        $accumulatedCost = $biayaMakanFlatPerTrip;
+        if ($accumulatedCost > $maxBudget) {
+            $accumulatedCost = $maxBudget; // Cap base cost so it doesn't exceed budget
+        }
 
         foreach ($destinations as $dest) {
-            $cost = (float) $dest->harga;
-            if (($accumulatedCost + $cost) <= $maxBudget) {
-                $accumulatedCost += $cost;
+            $costTiket = ((float) $dest->harga) * $jumlah_orang;
+            $costTransport = (10.0 / 35.0) * 15000.0;
+            $totalItemCost = $costTiket + $costTransport;
+
+            if (($accumulatedCost + $totalItemCost) <= $maxBudget) {
+                $accumulatedCost += $totalItemCost;
                 $selectedDestinations->push($dest);
             }
         }
@@ -64,15 +69,15 @@ class BudgetRecommendationService
 
         return [
             'recommendations'  => $selectedDestinations,
-            'total_cost'       => $accumulatedCost,
-            'remaining_budget' => max(0.0, $remainingBudget),
+            'total_cost'       => round($accumulatedCost, -2),
+            'remaining_budget' => max(0.0, round($remainingBudget, -2)),
             'count'            => $selectedDestinations->count(),
             'budget_max'       => $maxBudget,
         ];
     }
 
     /**
-     * Memilih tempat wisata menggunakan Algoritma Greedy berdasarkan Budget (dari data array tempat).
+     * Memilih tempat wisata menggunakan metode Optimasi Urutan Budget (dari data array tempat).
      */
     public function filterByBudget(array $places, float $userBudget): array
     {
@@ -84,7 +89,7 @@ class BudgetRecommendationService
             ];
         }
 
-        // Strategi Greedy: Urutkan tempat berdasarkan estimasi_biaya terendah
+        // Urutkan tempat berdasarkan estimasi_biaya terendah agar pas dengan budget
         usort($places, function ($a, $b) {
             return ($a['estimasi_biaya'] ?? 0) <=> ($b['estimasi_biaya'] ?? 0);
         });

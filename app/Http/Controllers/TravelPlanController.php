@@ -64,7 +64,7 @@ class TravelPlanController extends Controller
             abort(403, 'Anda tidak memiliki hak akses untuk melihat Rencana Perjalanan milik pengguna lain.');
         }
 
-        $travelPlan->load('destinasis', 'expenses', 'schedules.destinasi');
+        $travelPlan->load('expenses');
         $travels = \App\Models\Travel::latest()->get();
 
         return view('travel-plans.show', compact('travelPlan', 'travels'));
@@ -100,7 +100,7 @@ class TravelPlanController extends Controller
                 ->with('error', 'Checkout hanya tersedia jika Rencana Perjalanan menggunakan Agen Travel.');
         }
 
-        $travelPlan->load('destinasis', 'expenses', 'schedules.destinasi');
+        $travelPlan->load('expenses');
 
         return view('travel-plans.checkout', compact('travelPlan'));
     }
@@ -147,12 +147,26 @@ class TravelPlanController extends Controller
             abort(403, 'Anda tidak memiliki hak akses untuk menambah destinasi ke Rencana Perjalanan ini.');
         }
 
-        if ($travelPlan->destinasis()->where('destinasi_id', $request->destinasi_id)->exists()) {
+        $schedules = $travelPlan->schedules_json ?: [];
+        $exists = collect($schedules)->contains('destinasi_id', (int) $request->destinasi_id);
+        if ($exists) {
             return redirect()->route('destinasi.show', $request->destinasi_id)
                 ->with('error', 'Destinasi sudah ada di rencana "' . $travelPlan->nama_perjalanan . '".');
         }
 
-        $travelPlan->destinasis()->attach($request->destinasi_id);
+        $schedules[] = [
+            'destinasi_id' => (int) $request->destinasi_id,
+            'is_visited'   => false,
+            'tanggal'      => now()->toDateString(),
+            'jam_mulai'    => null,
+            'jam_selesai'  => null,
+            'catatan'      => null,
+        ];
+
+        $travelPlan->schedules_json = $schedules;
+        $destIds = collect($schedules)->pluck('destinasi_id')->toArray();
+        $travelPlan->total_cost = \App\Models\Destinasi::whereIn('id', $destIds)->sum('harga');
+        $travelPlan->save();
 
         return redirect()->route('destinasi.show', $request->destinasi_id)
             ->with('success', 'Destinasi ditambahkan ke rencana "' . $travelPlan->nama_perjalanan . '"!');
@@ -170,16 +184,27 @@ class TravelPlanController extends Controller
 
         $destinasi = Destinasi::find($request->destinasi_id);
 
+        $schedules = [
+            [
+                'destinasi_id' => (int) $request->destinasi_id,
+                'is_visited'   => false,
+                'tanggal'      => now()->toDateString(),
+                'jam_mulai'    => null,
+                'jam_selesai'  => null,
+                'catatan'      => null,
+            ]
+        ];
+
         $plan = Auth::user()->travelPlans()->create([
             'nama_perjalanan' => $request->nama_perjalanan,
-            'tujuan'          => $destinasi->kota ?? null,
-            'tanggal_mulai'   => $request->tanggal_mulai,
+            'tujuan'          => $destinasi->kota ?: 'Bandung',
+            'tanggal_berangkat' => $request->tanggal_mulai,
             'tanggal_selesai' => $request->tanggal_selesai,
-            'budget'          => $request->budget,
+            'budget'          => $request->budget ?: 0,
+            'total_cost'      => $destinasi->harga ?: 0,
             'status'          => 'Perencanaan Aktif',
+            'schedules_json'  => $schedules,
         ]);
-
-        $plan->destinasis()->attach($request->destinasi_id);
 
         return redirect()->route('destinasi.show', $request->destinasi_id)
             ->with('success', 'Rencana "' . $plan->nama_perjalanan . '" dibuat dan destinasi ditambahkan!');
@@ -194,15 +219,39 @@ class TravelPlanController extends Controller
             'destinasi_ids.*' => 'exists:destinasi,id',
         ]);
 
+        $schedulesPayload = [];
+        foreach ($request->destinasi_ids as $destId) {
+            $schedulesPayload[] = [
+                'destinasi_id' => (int) $destId,
+                'is_visited'   => false,
+                'tanggal'      => now()->toDateString(),
+                'jam_mulai'    => null,
+                'jam_selesai'  => null,
+                'catatan'      => null,
+            ];
+        }
+
+        $totalCost = \App\Models\Destinasi::whereIn('id', $request->destinasi_ids)->sum('harga');
+
+        $firstDestId = $request->destinasi_ids[0] ?? null;
+        $tujuan = 'Bandung';
+        if ($firstDestId) {
+            $dest = \App\Models\Destinasi::find($firstDestId);
+            if ($dest && $dest->kota) {
+                $tujuan = $dest->kota;
+            }
+        }
+
         $plan = Auth::user()->travelPlans()->create([
             'nama_perjalanan' => $request->nama_perjalanan,
+            'tujuan'          => $tujuan,
             'budget'          => $request->budget,
+            'total_cost'      => $totalCost,
             'status'          => 'Perencanaan Aktif',
+            'schedules_json'  => $schedulesPayload,
         ]);
 
-        $plan->destinasis()->attach($request->destinasi_ids);
-
-        return redirect()->route('travel-plans.show', $plan->id)
+        return redirect()->route('travel-plans.show', $plan->id_perencanaan)
             ->with('success', 'Rute terpendek berhasil disimpan sebagai rencana perjalanan!');
     }
 
@@ -212,7 +261,16 @@ class TravelPlanController extends Controller
             abort(403, 'Anda tidak memiliki hak akses untuk menghapus destinasi dari Rencana Perjalanan ini.');
         }
 
-        $travelPlan->destinasis()->detach($destinasi->id);
+        $schedules = $travelPlan->schedules_json ?: [];
+        $filteredSchedules = collect($schedules)->filter(function ($s) use ($destinasi) {
+            return (int) $s['destinasi_id'] !== (int) $destinasi->id;
+        })->values()->all();
+
+        $travelPlan->schedules_json = $filteredSchedules;
+        $destIds = collect($filteredSchedules)->pluck('destinasi_id')->toArray();
+        $travelPlan->total_cost = \App\Models\Destinasi::whereIn('id', $destIds)->sum('harga');
+        $travelPlan->save();
+
         return back()->with('success', 'Destinasi dihapus dari rencana.');
     }
 
@@ -248,7 +306,7 @@ class TravelPlanController extends Controller
             abort(403, 'Anda tidak memiliki hak akses untuk melihat Struk Rencana Perjalanan milik pengguna lain.');
         }
 
-        $travelPlan->load('destinasis', 'expenses', 'schedules.destinasi', 'travel');
+        $travelPlan->load('expenses', 'travel');
 
         $expensesByCategory = $travelPlan->expenses->groupBy(function ($expense) {
             return $expense->kategori ? ucfirst($expense->kategori) : 'Lain-lain';

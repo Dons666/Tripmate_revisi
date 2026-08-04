@@ -26,7 +26,7 @@ class TravelPortalController extends Controller
         }
 
         $bookings = TravelPlan::where('travel_id', $travel->id ?? 0)
-            ->with(['user', 'destinasis', 'schedules'])
+            ->with(['user'])
             ->orderByDesc('created_at')
             ->get();
 

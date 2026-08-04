@@ -20,9 +20,6 @@ class RouteController extends Controller
      * antara dua destinasi berdasarkan nama.
      *
      * GET /api/dijkstra/{start}/{end}
-     *
-     * @param  string  $start  Nama destinasi awal (URL-encoded)
-     * @param  string  $end    Nama destinasi akhir (URL-encoded)
      */
     public function show(string $start, string $end): JsonResponse
     {
@@ -51,18 +48,16 @@ class RouteController extends Controller
 
             if ($i > 0) {
                 $prev = $nodes[$i - 1];
-                $distRecord = \App\Models\JarakDestinasi::where('asal_id', $prev->id)
-                    ->where('tujuan_id', $d->id)
-                    ->first();
-                if ($distRecord) {
-                    $distanceFromPrev = (double) $distRecord->jarak;
-                    $durationFromPrev = (int) $distRecord->durasi;
-                } else {
-                    $dx = (float)$d->latitude - (float)$prev->latitude;
-                    $dy = (float)$d->longitude - (float)$prev->longitude;
-                    $distanceFromPrev = sqrt($dx*$dx + $dy*$dy) * 111.0 * 1.3;
-                    $durationFromPrev = (int) ($distanceFromPrev * 60);
-                }
+                
+                // Hitung jarak Haversine on-the-fly
+                $distanceFromPrev = $this->calculateHaversine(
+                    (float)$prev->latitude, (float)$prev->longitude,
+                    (float)$d->latitude, (float)$d->longitude
+                ) * 1.3; // winding road estimation
+                
+                // Estimasi durasi perjalanan (kecepatan rata-rata 40 km/jam -> 90 detik per km)
+                $durationFromPrev = (int) ($distanceFromPrev * 90); 
+
                 $totalDistance += $distanceFromPrev;
                 $totalDuration += $durationFromPrev;
             }
@@ -81,8 +76,6 @@ class RouteController extends Controller
             ];
         }
 
-        $apiKey = env('GOOGLE_MAPS_API_KEY', '');
-
         return response()->json([
             'status'         => 'success',
             'route'          => $formatted,
@@ -92,7 +85,22 @@ class RouteController extends Controller
             'total_cost'     => (float) $nodes->sum('harga'),
             'saran_biaya_transport' => max(15000.0, round($totalDistance * 3000, -3)),
             'saran_biaya_makan'     => max(25000.0, $nodes->count() * 25000),
-            'distance_source'=> !empty($apiKey) ? 'Google Maps Road API' : 'Haversine Geographic Fallback',
+            'distance_source'=> 'Haversine Geographic Engine (Offline & Fast)',
         ]);
+    }
+
+    /**
+     * Hitung jarak Haversine antar koordinat.
+     */
+    private function calculateHaversine($lat1, $lon1, $lat2, $lon2): float
+    {
+        $earthRadius = 6371; // km
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLon = deg2rad($lon2 - $lon1);
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+            cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+            sin($dLon / 2) * sin($dLon / 2);
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+        return $earthRadius * $c;
     }
 }

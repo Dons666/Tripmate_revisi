@@ -15,8 +15,8 @@ class PreferenceController extends Controller
      */
     public function show(Request $request)
     {
-        $userId = $request->user()?->id ?? Auth::id();
-        $pref = UserPreference::where('user_id', $userId)->first();
+        $userId = $request->user()?->id_user ?? Auth::id();
+        $pref = UserPreference::where('id_user', $userId)->first();
 
         if (!$pref) {
             return response()->json(['preference' => null]);
@@ -46,10 +46,10 @@ class PreferenceController extends Controller
             'hidden_gem'      => ['boolean'],
         ]);
 
-        $userId = $request->user()?->id ?? Auth::id();
+        $userId = $request->user()?->id_user ?? Auth::id();
 
         $pref = UserPreference::updateOrCreate(
-            ['user_id' => $userId],
+            ['id_user' => $userId],
             [
                 'kota_preferensi' => $validated['kota_preferensi'],
                 'minat_wisata'    => $validated['minat_wisata'],

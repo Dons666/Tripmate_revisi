@@ -33,7 +33,7 @@ class TravelDashboardController extends Controller
         $packageIds = $packages->pluck('id');
 
         $bookings = \App\Models\TravelPlan::whereIn('travel_id', $packageIds)
-            ->with(['user', 'destinasis', 'schedules', 'travel'])
+            ->with(['user', 'travel'])
             ->orderByDesc('created_at')
             ->get();
 

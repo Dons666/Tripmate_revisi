@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Rating;
 use App\Models\Destinasi;
+use App\Models\Rating;
 use App\Services\GeminiFilterService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,35 +16,6 @@ class RatingController extends Controller
     public function __construct(GeminiFilterService $geminiFilterService)
     {
         $this->geminiFilterService = $geminiFilterService;
-    }
-
-    /**
-     * GET /api/ratings/destinasi/{id}
-     * Ambil semua rating untuk destinasi tertentu (publik).
-     */
-    public function index(int $id)
-    {
-        $destinasi = Destinasi::findOrFail($id);
-
-        $ratings = Rating::where('destinasi_id', $id)
-            ->with('user:id,name')
-            ->latest()
-            ->get()
-            ->map(fn ($r) => [
-                'id'          => $r->id,
-                'user_name'   => $r->user?->name ?? 'Anonim',
-                'skor_rating' => (float) $r->skor_rating,
-                'komentar'    => $r->komentar,
-                'created_at'  => $r->created_at?->toDateString(),
-            ]);
-
-        return response()->json([
-            'destinasi_id'   => $destinasi->id,
-            'nama_destinasi' => $destinasi->nama_destinasi,
-            'avg_rating'     => $destinasi->rating_destinasi,
-            'total_reviews'  => $ratings->count(),
-            'ratings'        => $ratings,
-        ]);
     }
 
     /**
@@ -74,28 +45,31 @@ class RatingController extends Controller
             }
         }
 
-        $userId = $request->user()?->id ?? Auth::id();
+        $userId = $request->user()?->id_user ?? Auth::id();
 
-        $rating = Rating::updateOrCreate(
-            [
-                'user_id'      => $userId,
-                'destinasi_id' => $id,
-            ],
-            [
-                'skor_rating' => $validated['skor_rating'],
-                'komentar'    => $komentar,
-            ]
-        );
+        // Cari record ulasan destinasi yang sudah ada
+        $rating = Rating::where('id_user', $userId);
+        $rating = Rating::queryByDestinasi($rating, $id)->first();
 
-        // Update Bayesian average rating di tabel destinasi
+        if (!$rating) {
+            $rating = new Rating();
+            $rating->id_user = $userId;
+            $rating->destinasi_id = $id;
+        }
+
+        $rating->rating = $validated['skor_rating'];
+        $rating->komentar = $komentar;
+        $rating->save();
+
+        // Update Bayesian average rating di tabel destinasi asli
         Rating::updateDestinationRating($id);
 
         return response()->json([
             'status'     => 'success',
             'message'    => 'Rating berhasil disimpan.',
             'rating'     => [
-                'id'          => $rating->id,
-                'skor_rating' => (float) $rating->skor_rating,
+                'id'          => $rating->id_ulasan,
+                'skor_rating' => (float) $rating->rating,
                 'komentar'    => $rating->komentar,
             ],
             'avg_rating' => Destinasi::find($id)?->rating_destinasi,
@@ -104,21 +78,29 @@ class RatingController extends Controller
 
     public function my(Request $request)
     {
-        $userId = $request->user()?->id ?? Auth::id();
-        $ratings = Rating::where('user_id', $userId)
-            ->with(['destinasi:id,nama_destinasi', 'travel:id,nama_travel'])
+        $userId = $request->user()?->id_user ?? Auth::id();
+        
+        $ratings = Rating::where('id_user', $userId)
+            ->with(['travel:id,nama_travel'])
             ->latest()
             ->get()
-            ->map(fn ($r) => [
-                'id'             => $r->id,
-                'destinasi_id'   => $r->destinasi_id,
-                'nama_destinasi' => $r->destinasi?->nama_destinasi,
-                'travel_id'      => $r->travel_id,
-                'nama_travel'    => $r->travel?->nama_travel,
-                'skor_rating'    => (float) $r->skor_rating,
-                'komentar'       => $r->komentar,
-                'created_at'     => $r->created_at?->toDateString(),
-            ]);
+            ->map(function ($r) {
+                $destName = null;
+                if ($r->destinasi_id) {
+                    $dest = Destinasi::find($r->destinasi_id);
+                    $destName = $dest?->nama_destinasi;
+                }
+                return [
+                    'id'             => $r->id_ulasan,
+                    'destinasi_id'   => $r->destinasi_id,
+                    'nama_destinasi' => $destName,
+                    'travel_id'      => $r->travel_id,
+                    'nama_travel'    => $r->travel?->nama_travel,
+                    'skor_rating'    => (float) $r->rating,
+                    'komentar'       => $r->komentar,
+                    'created_at'     => $r->created_at?->toDateString(),
+                ];
+            });
 
         return response()->json(['ratings' => $ratings]);
     }
@@ -150,27 +132,30 @@ class RatingController extends Controller
             }
         }
 
-        $userId = $request->user()?->id ?? Auth::id();
+        $userId = $request->user()?->id_user ?? Auth::id();
 
-        $rating = Rating::updateOrCreate(
-            [
-                'user_id'   => $userId,
-                'travel_id' => $id,
-            ],
-            [
-                'skor_rating' => $validated['skor_rating'],
-                'komentar'    => $komentar,
-            ]
-        );
+        $rating = Rating::where('id_user', $userId)
+            ->where('travel_id', $id)
+            ->first();
 
-        $average = Rating::where('travel_id', $id)->avg('skor_rating') ?? 5.0;
+        if (!$rating) {
+            $rating = new Rating();
+            $rating->id_user = $userId;
+            $rating->travel_id = $id;
+        }
+
+        $rating->rating = $validated['skor_rating'];
+        $rating->komentar = $komentar;
+        $rating->save();
+
+        $average = Rating::where('travel_id', $id)->avg('rating') ?? 5.0;
         $travel->update(['rating' => $average]);
 
         return response()->json([
             'message'    => 'Rating travel berhasil disimpan.',
             'rating'     => [
-                'id'          => $rating->id,
-                'skor_rating' => (float) $rating->skor_rating,
+                'id'          => $rating->id_ulasan,
+                'skor_rating' => (float) $rating->rating,
                 'komentar'    => $rating->komentar,
             ],
             'avg_rating' => (float) $travel->rating,

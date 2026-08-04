@@ -66,7 +66,7 @@ class GeminiFilterService
 
         Log::warning("Menggunakan Fallback Local Data karena Gemini API tidak dapat dijangkau.");
 
-        // Fallback Data agar sistem Dijkstra & Greedy kamu tetap bisa di-test berjalan
+        // Fallback Data agar sistem Dijkstra & Optimasi Budget kamu tetap bisa di-test berjalan
         return [
             ['nama_tempat' => "Alun-Alun {$kota}", 'estimasi_biaya' => 0],
             ['nama_tempat' => "Museum Kota {$kota}", 'estimasi_biaya' => 20000],

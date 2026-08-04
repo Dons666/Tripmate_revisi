@@ -11,12 +11,14 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
+    protected $primaryKey = 'id_user';
+
     protected $fillable = [
-        'name',
+        'username',
         'email',
         'password',
         'role',
-        'avatar',
+        'gambar',
         'is_active',
         'deactivation_reason_code',
         'deactivation_reason_detail',
@@ -71,9 +73,19 @@ class User extends Authenticatable
         return $this->role === 'travel';
     }
 
-    public function getUsernameAttribute(): string
+    public function getUsernameAttribute($value): string
     {
-        return (string) ($this->name ?? '');
+        return (string) ($value ?? '');
+    }
+
+    public function getNameAttribute(): string
+    {
+        return (string) ($this->username ?? '');
+    }
+
+    public function getAvatarAttribute(): string
+    {
+        return (string) ($this->gambar ?? '');
     }
 
     public function getIsActiveAttribute($value): bool
@@ -97,7 +109,7 @@ class User extends Authenticatable
 
     public function travelPlans()
     {
-        return $this->hasMany(TravelPlan::class);
+        return $this->hasMany(TravelPlan::class, 'id_user', 'id_user');
     }
 
     public function armadas()

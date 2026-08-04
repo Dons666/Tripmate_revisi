@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Schedule;
 use App\Models\TravelPlan;
+use App\Models\Destinasi;
 use Illuminate\Http\Request;
 
 class ScheduleController extends Controller
@@ -14,11 +15,9 @@ class ScheduleController extends Controller
      */
     public function index(Request $request, string $planId)
     {
-        $plan = TravelPlan::where('user_id', $request->user()->id)->findOrFail($planId);
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)->findOrFail($planId);
 
-        $schedules = $plan->schedules()->with('destinasi:id,nama_destinasi,kota,gambar')->get();
-
-        return response()->json($schedules);
+        return response()->json($plan->schedules);
     }
 
     /**
@@ -26,7 +25,7 @@ class ScheduleController extends Controller
      */
     public function store(Request $request, string $planId)
     {
-        $plan = TravelPlan::where('user_id', $request->user()->id)->findOrFail($planId);
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)->findOrFail($planId);
 
         $request->validate([
             'judul'        => 'required|string|max:255',
@@ -37,19 +36,53 @@ class ScheduleController extends Controller
             'destinasi_id' => 'nullable|exists:destinasi,id',
         ]);
 
-        $schedule = $plan->schedules()->create([
-            'destinasi_id' => $request->destinasi_id,
-            'judul'        => $request->judul,
-            'deskripsi'    => $request->deskripsi,
+        $schedules = $plan->schedules_json ?: [];
+        $index = -1;
+
+        if ($request->destinasi_id) {
+            foreach ($schedules as $idx => $item) {
+                if ($item['destinasi_id'] == $request->destinasi_id) {
+                    $index = $idx;
+                    break;
+                }
+            }
+        }
+
+        $newEntry = [
+            'destinasi_id' => (int) $request->destinasi_id,
+            'is_visited'   => $index !== -1 ? ($schedules[$index]['is_visited'] ?? false) : false,
             'tanggal'      => $request->tanggal,
             'jam_mulai'    => $request->jam_mulai,
             'jam_selesai'  => $request->jam_selesai,
+            'catatan'      => $request->deskripsi,
+        ];
+
+        if ($index !== -1) {
+            $schedules[$index] = $newEntry;
+        } else {
+            $schedules[] = $newEntry;
+        }
+
+        $plan->update(['schedules_json' => $schedules]);
+
+        $sch = new Schedule([
+            'id_jadwal' => ($index !== -1 ? $index : count($schedules) - 1) + 1,
+            'id_perencanaan' => $plan->id_perencanaan,
+            'id_destinasi' => $request->destinasi_id,
+            'tanggal' => $request->tanggal,
+            'jam_mulai' => $request->jam_mulai,
+            'jam_selesai' => $request->jam_selesai,
+            'deskripsi' => $request->deskripsi,
         ]);
+
+        if ($request->destinasi_id) {
+            $sch->setRelation('destinasi', Destinasi::find($request->destinasi_id));
+        }
 
         return response()->json([
             'status'   => 'success',
             'message'  => 'Jadwal berhasil ditambahkan!',
-            'schedule' => $schedule->load('destinasi:id,nama_destinasi,kota'),
+            'schedule' => $sch,
         ], 201);
     }
 
@@ -58,9 +91,7 @@ class ScheduleController extends Controller
      */
     public function update(Request $request, string $planId, string $scheduleId)
     {
-        $plan = TravelPlan::where('user_id', $request->user()->id)->findOrFail($planId);
-
-        $schedule = $plan->schedules()->findOrFail($scheduleId);
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)->findOrFail($planId);
 
         $request->validate([
             'judul'        => 'required|string|max:255',
@@ -71,19 +102,61 @@ class ScheduleController extends Controller
             'destinasi_id' => 'nullable|exists:destinasi,id',
         ]);
 
-        $schedule->update([
-            'destinasi_id' => $request->destinasi_id,
-            'judul'        => $request->judul,
-            'deskripsi'    => $request->deskripsi,
+        $schedules = $plan->schedules_json ?: [];
+        $index = -1;
+
+        if ($request->destinasi_id) {
+            foreach ($schedules as $idx => $item) {
+                if ($item['destinasi_id'] == $request->destinasi_id) {
+                    $index = $idx;
+                    break;
+                }
+            }
+        }
+
+        if ($index === -1) {
+            $targetIndex = (int)$scheduleId - 1;
+            if (isset($schedules[$targetIndex])) {
+                $index = $targetIndex;
+            }
+        }
+
+        if ($index === -1) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Jadwal tidak ditemukan.',
+            ], 404);
+        }
+
+        $schedules[$index] = [
+            'destinasi_id' => (int) ($request->destinasi_id ?? $schedules[$index]['destinasi_id']),
+            'is_visited'   => $schedules[$index]['is_visited'] ?? false,
             'tanggal'      => $request->tanggal,
             'jam_mulai'    => $request->jam_mulai,
             'jam_selesai'  => $request->jam_selesai,
+            'catatan'      => $request->deskripsi,
+        ];
+
+        $plan->update(['schedules_json' => $schedules]);
+
+        $sch = new Schedule([
+            'id_jadwal' => $index + 1,
+            'id_perencanaan' => $plan->id_perencanaan,
+            'id_destinasi' => $schedules[$index]['destinasi_id'],
+            'tanggal' => $request->tanggal,
+            'jam_mulai' => $request->jam_mulai,
+            'jam_selesai' => $request->jam_selesai,
+            'deskripsi' => $request->deskripsi,
         ]);
+
+        if ($schedules[$index]['destinasi_id']) {
+            $sch->setRelation('destinasi', Destinasi::find($schedules[$index]['destinasi_id']));
+        }
 
         return response()->json([
             'status'   => 'success',
             'message'  => 'Jadwal berhasil diperbarui!',
-            'schedule' => $schedule->load('destinasi:id,nama_destinasi,kota'),
+            'schedule' => $sch,
         ]);
     }
 
@@ -92,10 +165,25 @@ class ScheduleController extends Controller
      */
     public function destroy(Request $request, string $planId, string $scheduleId)
     {
-        $plan = TravelPlan::where('user_id', $request->user()->id)->findOrFail($planId);
+        $plan = TravelPlan::where('id_user', $request->user()->id_user)->findOrFail($planId);
 
-        $schedule = $plan->schedules()->findOrFail($scheduleId);
-        $schedule->delete();
+        $schedules = $plan->schedules_json ?: [];
+        $index = -1;
+
+        $targetIndex = (int)$scheduleId - 1;
+        if (isset($schedules[$targetIndex])) {
+            $index = $targetIndex;
+        }
+
+        if ($index === -1) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Jadwal tidak ditemukan.',
+            ], 404);
+        }
+
+        array_splice($schedules, $index, 1);
+        $plan->update(['schedules_json' => $schedules]);
 
         return response()->json([
             'status'  => 'success',

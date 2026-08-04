@@ -131,22 +131,34 @@ class BudgetController extends Controller
 
             $firstDest = Destinasi::find($request->destinasi_ids[0]);
 
+            $schedulesPayload = [];
+            foreach ($request->destinasi_ids as $destId) {
+                $schedulesPayload[] = [
+                    'destinasi_id' => (int) $destId,
+                    'is_visited'   => false,
+                    'tanggal'      => now()->toDateString(),
+                    'jam_mulai'    => null,
+                    'jam_selesai'  => null,
+                    'catatan'      => null,
+                ];
+            }
+
+            $totalCost = Destinasi::whereIn('id', $request->destinasi_ids)->sum('harga');
+
             $plan = Auth::user()->travelPlans()->create([
                 'nama_perjalanan' => $request->nama_perjalanan,
                 'tujuan'          => $firstDest->kota ?? 'Perjalanan Rute',
                 'budget'          => $request->budget,
+                'total_cost'      => $totalCost,
                 'status'          => 'Perencanaan Aktif',
-                'tanggal_mulai'   => $request->tanggal_mulai ?? now()->format('Y-m-d'),
+                'tanggal_berangkat' => $request->tanggal_mulai ?? now()->format('Y-m-d'),
                 'tanggal_selesai' => $request->tanggal_selesai ?? now()->addDays(2)->format('Y-m-d'),
+                'schedules_json'  => $schedulesPayload,
             ]);
-
-            foreach ($request->destinasi_ids as $destId) {
-                $plan->destinasis()->attach($destId);
-            }
 
             DB::commit();
 
-            return redirect()->route('travel-plans.show', $plan)
+            return redirect()->route('travel-plans.show', $plan->id_perencanaan)
                 ->with('success', 'Rencana perjalanan "' . $plan->nama_perjalanan . '" berhasil dibuat dari Optimasi Budget & Rute!');
 
         } catch (\Exception $e) {

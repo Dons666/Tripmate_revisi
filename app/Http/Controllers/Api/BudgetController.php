@@ -35,12 +35,14 @@ class BudgetController extends Controller
             'budget'   => 'required|numeric|min:0',
             'kategori' => 'nullable|string|max:100',
             'kota'     => 'nullable|string|max:100',
+            'jumlah_orang' => 'nullable|integer|min:1',
         ]);
 
         $data = $this->budgetService->recommend(
             $request->budget,
             $request->kategori,
             $request->kota,
+            $request->input('jumlah_orang', 1)
         );
 
         return response()->json([
@@ -77,11 +79,13 @@ class BudgetController extends Controller
             return response()->json(['message' => "Destinasi awal atau akhir tidak ditemukan di database."], 404);
         }
 
+        $jumlah_orang = (int) $request->input('jumlah_orang', 1);
+
         // 1. Dapatkan kandidat destinasi dalam budget DAN berada di dalam koridor rute (bounding box)
         $query = \App\Models\Destinasi::query();
         
-        // Filter by budget
-        $query->where('harga', '<=', $request->budget);
+        // Filter tiket per orang tidak melebihi total budget
+        $query->where('harga', '<=', $request->budget / max(1, $jumlah_orang));
 
         // Filter by category if provided
         if ($request->kategori) {
@@ -118,8 +122,8 @@ class BudgetController extends Controller
             }
         }
 
-        // Ambil maksimal 30 destinasi kandidat
-        $destinations = $query->orderBy('harga', 'asc')->limit(30)->get();
+        // Ambil maksimal 50 destinasi kandidat, prioritaskan tempat gratis & murah dulu
+        $destinations = $query->orderBy('harga', 'asc')->limit(50)->get();
 
         // 2. Hitung rute waypoint menggunakan Dijkstra
         $rawRoute = $this->dijkstraService->calculateRoute(
@@ -132,38 +136,34 @@ class BudgetController extends Controller
             return response()->json(['message' => $rawRoute['error']], 404);
         }
 
-        // 3. Pembatasan budget: akumulasikan biaya per destinasi
+        $jumlah_orang = (int) $request->input('jumlah_orang', 1);
+        $biayaMakanFlatPerTrip = 30000 * $jumlah_orang;
+        $extraBiayaMakan = 0.0;
+
         $finalRoute      = [];
-        $accumulatedCost = 0;
+        $baseCost = ($biayaMakanFlatPerTrip);
         $maxBudget       = (float) $request->budget;
-
-        foreach ($rawRoute as $index => $place) {
-            $cost = (float) ($place->harga ?? 0);
-
-            // Titik awal dan akhir selalu dimasukkan
-            if ($index === 0 || $index === (count($rawRoute) - 1)) {
-                $accumulatedCost += $cost;
-                $finalRoute[] = $place;
-                continue;
-            }
-
-            if (($accumulatedCost + $cost) <= $maxBudget) {
-                $accumulatedCost += $cost;
-                $finalRoute[] = $place;
-            }
+        
+        $accumulatedCost = $baseCost;
+        if ($accumulatedCost > $maxBudget) {
+            $accumulatedCost = $maxBudget;
         }
 
         $totalDistance = 0.0;
         $totalDuration = 0;
         $formatted = [];
 
-        for ($i = 0; $i < count($finalRoute); $i++) {
-            $d = $finalRoute[$i];
+        $endNode = count($rawRoute) > 1 ? $rawRoute[count($rawRoute) - 1] : null;
+        $costTiketEnd = $endNode ? (((float) ($endNode->harga ?? 0)) * $jumlah_orang) : 0.0;
+
+        foreach ($rawRoute as $index => $d) {
+            $costTiket = ((float) ($d->harga ?? 0)) * $jumlah_orang;
             $distanceFromPrev = 0.0;
             $durationFromPrev = 0;
+            $costTransport = 0.0;
 
-            if ($i > 0) {
-                $prev = $finalRoute[$i - 1];
+            if ($index > 0) {
+                $prev = $finalRoute[count($finalRoute) - 1];
                 $distRecord = \App\Models\JarakDestinasi::where('asal_id', $prev->id)
                     ->where('tujuan_id', $d->id)
                     ->first();
@@ -176,36 +176,106 @@ class BudgetController extends Controller
                     $distanceFromPrev = sqrt($dx*$dx + $dy*$dy) * 111.0 * 1.3;
                     $durationFromPrev = (int) ($distanceFromPrev * 60);
                 }
-                $totalDistance += $distanceFromPrev;
-                $totalDuration += $durationFromPrev;
+                // Transportasi: 1 liter per 35 km, 1 liter = 15000
+                $costTransport = ($distanceFromPrev / 35.0) * 15000.0;
             }
 
-            $formatted[] = [
-                'id'             => $d->id,
-                'nama_destinasi' => $d->nama_destinasi,
-                'kategori'       => $d->kategori,
-                'kota'           => $d->kota,
-                'harga'          => (float) $d->harga,
-                'latitude'       => (float) $d->latitude,
-                'longitude'      => (float) $d->longitude,
-                'gambar'         => $d->image_url,
-                'jarak_dari_sebelumnya' => round($distanceFromPrev, 2),
-                'durasi_dari_sebelumnya' => $durationFromPrev,
-            ];
+            $totalItemCost = $costTiket + $costTransport;
+
+            // Deteksi tempat kuliner / makanan
+            $kat = strtolower(($d->kategori ?? '') . ' ' . ($d->tipe ?? '') . ' ' . ($d->nama_destinasi ?? ''));
+            $isKuliner = str_contains($kat, 'kuliner') || str_contains($kat, 'makan') || 
+                         str_contains($kat, 'resto') || str_contains($kat, 'warung') || 
+                         str_contains($kat, 'cafe') || str_contains($kat, 'kopi') || 
+                         str_contains($kat, 'bubur') || str_contains($kat, 'batagor') ||
+                         str_contains($kat, 'artisan tea');
+
+            // Titik awal dan akhir selalu dimasukkan (jika budget cukup)
+            if ($index === 0 || $index === (count($rawRoute) - 1)) {
+                if (($accumulatedCost + $totalItemCost) > $maxBudget) {
+                    continue; // Skip jika budget benar-benar tidak cukup
+                }
+                $accumulatedCost += $totalItemCost;
+                if ($isKuliner) {
+                    $extraBiayaMakan += $costTiket;
+                }
+                $finalRoute[] = $d;
+                $totalDistance += $distanceFromPrev;
+                $totalDuration += $durationFromPrev;
+
+                $formatted[] = [
+                    'id'             => $d->id,
+                    'nama_destinasi' => $d->nama_destinasi,
+                    'kategori'       => $d->kategori,
+                    'kota'           => $d->kota,
+                    'harga'          => (float) $d->harga,
+                    'latitude'       => (float) $d->latitude,
+                    'longitude'      => (float) $d->longitude,
+                    'gambar'         => $d->image_url,
+                    'jarak_dari_sebelumnya' => round($distanceFromPrev, 2),
+                    'durasi_dari_sebelumnya' => $durationFromPrev,
+                    'is_kuliner'     => $isKuliner,
+                ];
+                continue;
+            }
+
+            // Estimasi sisa biaya perjalanan dari tempat perantara ini ke titik akhir (End Node)
+            $distanceToEnd = 0.0;
+            if ($endNode) {
+                $distRecordEnd = \App\Models\JarakDestinasi::where('asal_id', $d->id)
+                    ->where('tujuan_id', $endNode->id)
+                    ->first();
+                if ($distRecordEnd) {
+                    $distanceToEnd = (double) $distRecordEnd->jarak;
+                } else {
+                    $dx = (float)$endNode->latitude - (float)$d->latitude;
+                    $dy = (float)$endNode->longitude - (float)$d->longitude;
+                    $distanceToEnd = sqrt($dx*$dx + $dy*$dy) * 111.0 * 1.3;
+                }
+            }
+            $costTransportEnd = ($distanceToEnd / 35.0) * 15000.0;
+            $projectedEndCost = $costTiketEnd + $costTransportEnd;
+
+            // Masukkan tempat perantara hanya jika (biaya terakumulasi + biaya tempat ini + estimasi biaya pulang/ke titik akhir) <= budget
+            if (($accumulatedCost + $totalItemCost + $projectedEndCost) <= $maxBudget) {
+                $accumulatedCost += $totalItemCost;
+                if ($isKuliner) {
+                    $extraBiayaMakan += $costTiket;
+                }
+                $finalRoute[] = $d;
+                $totalDistance += $distanceFromPrev;
+                $totalDuration += $durationFromPrev;
+
+                $formatted[] = [
+                    'id'             => $d->id,
+                    'nama_destinasi' => $d->nama_destinasi,
+                    'kategori'       => $d->kategori,
+                    'kota'           => $d->kota,
+                    'harga'          => (float) $d->harga,
+                    'latitude'       => (float) $d->latitude,
+                    'longitude'      => (float) $d->longitude,
+                    'gambar'         => $d->image_url,
+                    'jarak_dari_sebelumnya' => round($distanceFromPrev, 2),
+                    'durasi_dari_sebelumnya' => $durationFromPrev,
+                    'is_kuliner'     => $isKuliner,
+                ];
+            }
         }
 
         $apiKey = env('GOOGLE_MAPS_API_KEY', '');
+        $saranTransport = round(($totalDistance / 35.0) * 15000.0, -2);
+        $saranMakanTotal = round($biayaMakanFlatPerTrip + $extraBiayaMakan, -2);
 
         return response()->json([
             'status'           => 'success',
             'route'            => $formatted,
-            'total_cost'       => $accumulatedCost,
-            'remaining_budget' => max(0.0, $maxBudget - $accumulatedCost),
+            'total_cost'       => round($accumulatedCost, -2),
+            'remaining_budget' => max(0.0, round($maxBudget - $accumulatedCost, -2)),
             'total_nodes'      => count($finalRoute),
             'total_distance'   => round($totalDistance, 2),
             'total_duration'   => $totalDuration,
-            'saran_biaya_transport' => max(15000.0, round($totalDistance * 3000, -3)),
-            'saran_biaya_makan'     => max(25000.0, count($finalRoute) * 25000),
+            'saran_biaya_transport' => $saranTransport,
+            'saran_biaya_makan'     => $saranMakanTotal,
             'distance_source'  => !empty($apiKey) ? 'Google Maps Road API' : 'Haversine Geographic Fallback',
         ]);
     }
@@ -224,9 +294,10 @@ class BudgetController extends Controller
             'total_cost'      => 'required|numeric',
             'destinasi_ids'   => 'required|array|min:1',
             'destinasi_ids.*' => 'exists:destinasi,id',
+            'jumlah_peserta'  => 'nullable|integer|min:1',
             'estimasi_makan_per_orang' => 'nullable|numeric|min:0',
             'estimasi_transport_per_orang' => 'nullable|numeric|min:0',
-            'schedules'       => 'required|array',
+            'schedules'       => 'nullable|array',
             'schedules.*.destinasi_id' => 'required|exists:destinasi,id',
             'schedules.*.tanggal'      => 'required|date',
             'schedules.*.jam_mulai'    => 'nullable|date_format:H:i',
@@ -234,57 +305,64 @@ class BudgetController extends Controller
             'schedules.*.deskripsi'    => 'nullable|string',
         ]);
 
-        // Validasi agar semua destinasi yang direkomendasikan wajib diatur jadwalnya
-        $scheduleDestIds = collect($request->schedules)->pluck('destinasi_id')->toArray();
-        foreach ($request->destinasi_ids as $destId) {
-            if (!in_array($destId, $scheduleDestIds)) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Setiap destinasi terpilih wajib diatur jadwal kunjungannya terlebih dahulu!',
-                ], 422);
-            }
-        }
-
         try {
-            DB::beginTransaction();
+            $schedulesPayload = [];
+            $schedulesInput = $request->schedules ?: [];
+
+            if (empty($schedulesInput)) {
+                // Jika jadwal kosong, buat slot jadwal kosong default untuk semua destinasi terpilih
+                foreach ($request->destinasi_ids as $destId) {
+                    $schedulesPayload[] = [
+                        'destinasi_id' => (int) $destId,
+                        'is_visited'   => false,
+                        'tanggal'      => now()->toDateString(),
+                        'jam_mulai'    => null,
+                        'jam_selesai'  => null,
+                        'catatan'      => null,
+                    ];
+                }
+            } else {
+                foreach ($schedulesInput as $sch) {
+                    $schedulesPayload[] = [
+                        'destinasi_id' => (int) $sch['destinasi_id'],
+                        'is_visited'   => false,
+                        'tanggal'      => $sch['tanggal'],
+                        'jam_mulai'    => $sch['jam_mulai'] ?? null,
+                        'jam_selesai'  => $sch['jam_selesai'] ?? null,
+                        'catatan'      => $sch['deskripsi'] ?? null,
+                    ];
+                }
+            }
+
+            $firstDestId = $request->destinasi_ids[0] ?? null;
+            $tujuan = 'Bandung';
+            if ($firstDestId) {
+                $dest = \App\Models\Destinasi::find($firstDestId);
+                if ($dest && $dest->kota) {
+                    $tujuan = $dest->kota;
+                }
+            }
 
             /** @var \App\Models\TravelPlan $plan */
             $plan = $request->user()->travelPlans()->create([
                 'nama_perjalanan' => $request->nama_perjalanan,
+                'tujuan'          => $tujuan,
                 'budget'          => $request->budget,
                 'total_cost'      => $request->total_cost,
+                'jumlah_peserta'  => $request->jumlah_peserta ?? 1,
                 'estimasi_makan_per_orang' => $request->estimasi_makan_per_orang ?? 0,
                 'estimasi_transport_per_orang' => $request->estimasi_transport_per_orang ?? 0,
+                'schedules_json'  => $schedulesPayload,
                 'status'          => 'planning',
             ]);
-
-            foreach ($request->destinasi_ids as $destinasiId) {
-                $plan->destinasis()->attach($destinasiId);
-            }
-
-            // Simpan jadwal (schedules)
-            foreach ($request->schedules as $sch) {
-                $destName = \App\Models\Destinasi::find($sch['destinasi_id'])->nama_destinasi ?? '';
-                $plan->schedules()->create([
-                    'destinasi_id' => $sch['destinasi_id'],
-                    'judul'        => 'Kunjungan ' . $destName,
-                    'tanggal'      => $sch['tanggal'],
-                    'jam_mulai'    => $sch['jam_mulai'] ?? null,
-                    'jam_selesai'  => $sch['jam_selesai'] ?? null,
-                    'deskripsi'    => $sch['deskripsi'] ?? null,
-                ]);
-            }
-
-            DB::commit();
 
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Rencana perjalanan berhasil disimpan!',
-                'plan'    => $plan->load(['destinasis', 'schedules']),
+                'plan'    => $plan,
             ], 201);
 
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Gagal menyimpan plan: ' . $e->getMessage());
             return response()->json([
                 'status'  => 'error',
