@@ -19,7 +19,6 @@ class RecommendationService
             'kategori',
             'kota',
             'harga',
-            'hidden_gem',
             'fitur_cbf',
             'gambar'
         )->withAvg('ratings', 'skor_rating')
@@ -32,7 +31,7 @@ class RecommendationService
      */
     public function getUserPreference($userId)
     {
-        return UserPreference::where('user_id', $userId)->first();
+        return UserPreference::where('id_user', $userId)->first();
     }
 
     /**
@@ -228,7 +227,7 @@ class RecommendationService
             $preference &&
             $preference->hidden_gem
         ) {
-            $query->where('hidden_gem', 1);
+            // $query->where('hidden_gem', 1);
         }
 
         $hasil = $query->get();
@@ -318,7 +317,7 @@ class RecommendationService
                 'nama_destinasi' => $document['nama_destinasi'],
                 'tokens' => preg_split(
                     '/\s+/',
-                    trim($document['fitur_cbf'])
+                    trim($document['fitur_cbf'] ?? '')
                 ),
             ];
         }
@@ -635,7 +634,7 @@ class RecommendationService
                 continue;
             }
 
-            if ($destination->hidden_gem) {
+            if (false /* $destination->hidden_gem */) {
                 $hiddenGem[] = $item;
             } else {
                 $regular[] = $item;
@@ -700,7 +699,7 @@ class RecommendationService
                 continue;
             }
 
-            if ($destinasi->hidden_gem) {
+            if (false /* $destinasi->hidden_gem */) {
                 $hiddenGem[] = $item;
             } else {
                 $normal[] = $item;
@@ -842,7 +841,6 @@ class RecommendationService
             'kategori',
             'kota',
             'harga',
-            'hidden_gem',
             'fitur_cbf',
             'gambar'
         )->withAvg('ratings', 'skor_rating')

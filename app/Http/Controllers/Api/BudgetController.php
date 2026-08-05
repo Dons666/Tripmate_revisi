@@ -353,6 +353,7 @@ class BudgetController extends Controller
                 'estimasi_makan_per_orang' => $request->estimasi_makan_per_orang ?? 0,
                 'estimasi_transport_per_orang' => $request->estimasi_transport_per_orang ?? 0,
                 'schedules_json'  => $schedulesPayload,
+                'tanggal_berangkat' => !empty($schedulesPayload) ? $schedulesPayload[0]['tanggal'] : null,
                 'status'          => 'planning',
             ]);
 

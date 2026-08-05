@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('auth/logout', [AuthController::class, 'logout']);
     Route::get('auth/me',      [AuthController::class, 'me']);
+    Route::post('auth/profile', [AuthController::class, 'updateProfile']);
 
     // Rekomendasi TF-IDF (personalized)
     Route::get('recommendations', [RecommendationController::class, 'index']);
