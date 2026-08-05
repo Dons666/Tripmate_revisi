@@ -10,8 +10,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Memanggil semua seeder (DatabaseSeeder) secara otomatis
-        Artisan::call('db:seed', ['--force' => true]);
+        // Artisan::call('db:seed', ['--force' => true]);
     }
 
     /**

@@ -12,13 +12,27 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('travel_plans', function (Blueprint $table) {
-            $table->string('payment_status')->default('unpaid')->after('is_checkout'); // unpaid, pending_admin, escrow_held, payout_released
-            $table->string('trip_status')->default('planning')->after('payment_status'); // planning, ready, in_progress, completed, cancelled
-            $table->string('payment_method')->nullable()->after('trip_status');
-            $table->string('payment_ref')->nullable()->after('payment_method');
-            $table->timestamp('trip_started_at')->nullable()->after('payment_ref');
-            $table->timestamp('trip_ended_at')->nullable()->after('trip_started_at');
-            $table->timestamp('payout_released_at')->nullable()->after('trip_ended_at');
+            if (!Schema::hasColumn('travel_plans', 'payment_status')) {
+                $table->string('payment_status')->default('unpaid');
+            }
+            if (!Schema::hasColumn('travel_plans', 'trip_status')) {
+                $table->string('trip_status')->default('planning');
+            }
+            if (!Schema::hasColumn('travel_plans', 'payment_method')) {
+                $table->string('payment_method')->nullable();
+            }
+            if (!Schema::hasColumn('travel_plans', 'payment_ref')) {
+                $table->string('payment_ref')->nullable();
+            }
+            if (!Schema::hasColumn('travel_plans', 'trip_started_at')) {
+                $table->timestamp('trip_started_at')->nullable();
+            }
+            if (!Schema::hasColumn('travel_plans', 'trip_ended_at')) {
+                $table->timestamp('trip_ended_at')->nullable();
+            }
+            if (!Schema::hasColumn('travel_plans', 'payout_released_at')) {
+                $table->timestamp('payout_released_at')->nullable();
+            }
         });
     }
 
@@ -28,7 +42,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('travel_plans', function (Blueprint $table) {
-            $table->dropColumn([
+            $cols = array_filter([
                 'payment_status',
                 'trip_status',
                 'payment_method',
@@ -36,7 +50,11 @@ return new class extends Migration
                 'trip_started_at',
                 'trip_ended_at',
                 'payout_released_at',
-            ]);
+            ], fn($c) => Schema::hasColumn('travel_plans', $c));
+
+            if (!empty($cols)) {
+                $table->dropColumn($cols);
+            }
         });
     }
 };

@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('travel_plans', function (Blueprint $table) {
-            $table->integer('jumlah_peserta')->default(1)->after('budget');
+            if (!Schema::hasColumn('travel_plans', 'jumlah_peserta')) {
+                $table->integer('jumlah_peserta')->default(1);
+            }
         });
     }
 
@@ -22,7 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('travel_plans', function (Blueprint $table) {
-            $table->dropColumn('jumlah_peserta');
+            if (Schema::hasColumn('travel_plans', 'jumlah_peserta')) {
+                $table->dropColumn('jumlah_peserta');
+            }
         });
     }
 };

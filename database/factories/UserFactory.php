@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -31,5 +32,14 @@ class UserFactory extends Factory
             'remember_token' => Str::random(10),
             'role' => 'user',
         ];
+    }
+
+    public function configure()
+    {
+        return $this->afterCreating(function (User $user) {
+            if ($user->roles()->count() === 0) {
+                $user->assignRole('user');
+            }
+        });
     }
 }

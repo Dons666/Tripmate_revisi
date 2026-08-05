@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('travel_plans', function (Blueprint $table) {
-            $table->string('payment_proof')->nullable()->after('payment_ref');
+            if (!Schema::hasColumn('travel_plans', 'payment_proof')) {
+                $table->string('payment_proof')->nullable();
+            }
         });
     }
 
@@ -22,7 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('travel_plans', function (Blueprint $table) {
-            $table->dropColumn('payment_proof');
+            if (Schema::hasColumn('travel_plans', 'payment_proof')) {
+                $table->dropColumn('payment_proof');
+            }
         });
     }
 };

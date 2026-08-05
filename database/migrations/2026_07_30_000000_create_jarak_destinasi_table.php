@@ -8,16 +8,18 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('jarak_destinasi', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('asal_id');
-            $table->unsignedBigInteger('tujuan_id');
-            $table->double('jarak')->comment('dalam kilometer');
-            $table->integer('durasi')->comment('dalam detik');
-            $table->timestamps();
+        if (!Schema::hasTable('jarak_destinasi')) {
+            Schema::create('jarak_destinasi', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('asal_id');
+                $table->unsignedBigInteger('tujuan_id');
+                $table->double('jarak')->comment('dalam kilometer');
+                $table->integer('durasi')->comment('dalam detik');
+                $table->timestamps();
 
-            $table->unique(['asal_id', 'tujuan_id']);
-        });
+                $table->unique(['asal_id', 'tujuan_id']);
+            });
+        }
     }
 
     public function down(): void
