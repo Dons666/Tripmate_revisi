@@ -21,7 +21,7 @@ class RecommendationService
             'harga',
             'fitur_cbf',
             'gambar'
-        )->withAvg('ratings', 'skor_rating')
+        )->withAvg('ratings', 'rating')
          ->withCount('ratings')
          ->paginate(12);
     }
@@ -742,7 +742,7 @@ class RecommendationService
         $results = [];
 
         foreach ($topRecommendations as $recommendation) {
-            $destination = Destinasi::withAvg('ratings', 'skor_rating')
+            $destination = Destinasi::withAvg('ratings', 'rating')
                 ->withCount('ratings')
                 ->find($recommendation['id']);
 
@@ -777,7 +777,7 @@ class RecommendationService
             'id',
             'nama_destinasi',
             'fitur_cbf'
-        )->withAvg('ratings', 'skor_rating')
+        )->withAvg('ratings', 'rating')
          ->withCount('ratings')
          ->get();
 
@@ -843,7 +843,7 @@ class RecommendationService
             'harga',
             'fitur_cbf',
             'gambar'
-        )->withAvg('ratings', 'skor_rating')
+        )->withAvg('ratings', 'rating')
          ->withCount('ratings')
          ->orderByDesc('ratings_avg_skor_rating');
 

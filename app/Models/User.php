@@ -102,8 +102,12 @@ class User extends Authenticatable
             return strtolower(trim((string) ($first ? $first->role : 'user')));
         }
 
-        $roleVal = $this->roles()->value('role');
-        return strtolower(trim((string) ($roleVal ?? 'user')));
+        if (\Illuminate\Support\Facades\Schema::hasTable('roles')) {
+            $roleVal = $this->roles()->value('role');
+            return strtolower(trim((string) ($roleVal ?? 'user')));
+        }
+        
+        return strtolower(trim((string) ($this->attributes['role'] ?? 'user')));
     }
 
     public function scopeRole($query, string $role)
@@ -178,9 +182,9 @@ class User extends Authenticatable
         return $this->hasRole('travel');
     }
 
-    public function getAvatarAttribute($value): string
+    public function getAvatarAttribute(): string
     {
-        return (string) ($value ?? '');
+        return (string) ($this->attributes['gambar'] ?? '');
     }
 
     public function getIsActiveAttribute($value): bool

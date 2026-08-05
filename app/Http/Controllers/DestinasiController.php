@@ -54,7 +54,7 @@ class DestinasiController extends Controller
         }
 
         $destinasis = $query
-            ->withAvg('ratings', 'skor_rating')
+            ->withAvg('ratings', 'rating')
             ->withCount('ratings')
             ->paginate(12);
         $kotas = Destinasi::select('kota')->distinct()->orderBy('kota')->get();

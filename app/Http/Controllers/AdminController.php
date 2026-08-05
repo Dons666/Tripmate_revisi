@@ -69,7 +69,7 @@ class AdminController extends Controller
         $approvedTravelCount = PenyediaTravel::where('status', 'approved')->count();
 
         $topPlaces = Destinasi::withCount('ratings')
-            ->withAvg('ratings', 'skor_rating')
+            ->withAvg('ratings', 'rating')
             ->having('ratings_count', '>', 0)
             ->orderByDesc('ratings_avg_skor_rating')
             ->orderByDesc('ratings_count')
@@ -869,7 +869,7 @@ class AdminController extends Controller
 
         return Destinasi::where('tipe', $type)
             ->withCount('ratings')
-            ->withAvg('ratings', 'skor_rating')
+            ->withAvg('ratings', 'rating')
             ->orderByDesc('updated_at')
             ->get();
     }

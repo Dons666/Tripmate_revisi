@@ -4,15 +4,20 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\DijkstraService;
+use App\Services\GoogleMapsDistanceService;
 use Illuminate\Http\JsonResponse;
 
 class RouteController extends Controller
 {
     protected DijkstraService $dijkstraService;
+    protected GoogleMapsDistanceService $googleMapsService;
 
-    public function __construct(DijkstraService $dijkstraService)
-    {
+    public function __construct(
+        DijkstraService $dijkstraService,
+        GoogleMapsDistanceService $googleMapsService
+    ) {
         $this->dijkstraService = $dijkstraService;
+        $this->googleMapsService = $googleMapsService;
     }
 
     /**
@@ -48,15 +53,13 @@ class RouteController extends Controller
 
             if ($i > 0) {
                 $prev = $nodes[$i - 1];
-                
-                // Hitung jarak Haversine on-the-fly
-                $distanceFromPrev = $this->calculateHaversine(
+                // Dapatkan jarak via Google Maps Service
+                $distData = $this->googleMapsService->getDistanceAndDuration(
                     (float)$prev->latitude, (float)$prev->longitude,
                     (float)$d->latitude, (float)$d->longitude
-                ) * 1.3; // winding road estimation
-                
-                // Estimasi durasi perjalanan (kecepatan rata-rata 40 km/jam -> 90 detik per km)
-                $durationFromPrev = (int) ($distanceFromPrev * 90); 
+                );
+                $distanceFromPrev = $distData['distance'];
+                $durationFromPrev = $distData['duration'];
 
                 $totalDistance += $distanceFromPrev;
                 $totalDuration += $durationFromPrev;
@@ -87,20 +90,5 @@ class RouteController extends Controller
             'saran_biaya_makan'     => max(25000.0, $nodes->count() * 25000),
             'distance_source'=> 'Haversine Geographic Engine (Offline & Fast)',
         ]);
-    }
-
-    /**
-     * Hitung jarak Haversine antar koordinat.
-     */
-    private function calculateHaversine($lat1, $lon1, $lat2, $lon2): float
-    {
-        $earthRadius = 6371; // km
-        $dLat = deg2rad($lat2 - $lat1);
-        $dLon = deg2rad($lon2 - $lon1);
-        $a = sin($dLat / 2) * sin($dLat / 2) +
-            cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
-            sin($dLon / 2) * sin($dLon / 2);
-        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
-        return $earthRadius * $c;
     }
 }
