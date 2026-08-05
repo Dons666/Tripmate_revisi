@@ -8,14 +8,16 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('bookmarks', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('destinasi_id')->constrained('destinasi')->cascadeOnDelete();
-            $table->timestamps();
+        if (!Schema::hasTable('bookmarks')) {
+            Schema::create('bookmarks', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('user_id');
+                $table->unsignedBigInteger('destinasi_id');
+                $table->timestamps();
 
-            $table->unique(['user_id', 'destinasi_id']);
-        });
+                $table->unique(['user_id', 'destinasi_id']);
+            });
+        }
     }
 
     public function down(): void

@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('ratings', function (Blueprint $table) {
-            $table->unsignedBigInteger('destinasi_id')->nullable()->change();
-        });
+        if (Schema::hasColumn('ratings', 'destinasi_id')) {
+            Schema::table('ratings', function (Blueprint $table) {
+                $table->unsignedBigInteger('destinasi_id')->nullable()->change();
+            });
+        }
     }
 
     /**
@@ -21,9 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('ratings', function (Blueprint $table) {
-            $table->unsignedBigInteger('destinasi_id')->nullable(false)->change();
-            $table->unique(['user_id', 'destinasi_id']);
-        });
+        if (Schema::hasColumn('ratings', 'destinasi_id')) {
+            Schema::table('ratings', function (Blueprint $table) {
+                $table->unsignedBigInteger('destinasi_id')->nullable(false)->change();
+            });
+        }
     }
 };

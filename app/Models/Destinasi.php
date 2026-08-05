@@ -87,7 +87,7 @@ class Destinasi extends Model
 
     public function ratings()
     {
-        return $this->hasMany(Rating::class);
+        return $this->hasMany(Rating::class, 'destinasi_id', 'id');
     }
 
     public function bookmarks()

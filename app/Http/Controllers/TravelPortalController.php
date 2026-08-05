@@ -79,7 +79,7 @@ class TravelPortalController extends Controller
         );
 
         // Notifikasi ke Admin untuk Pencairan Dana
-        $adminUser = \App\Models\User::where('role', 'admin')->first();
+        $adminUser = \App\Models\User::role('admin')->first();
         if ($adminUser) {
             UserNotification::sendNotification(
                 $adminUser->id,

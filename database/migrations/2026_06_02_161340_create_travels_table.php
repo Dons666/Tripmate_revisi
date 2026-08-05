@@ -14,7 +14,7 @@ return new class extends Migration
         if (!Schema::hasTable('travels')) {
             Schema::create('travels', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+                $table->unsignedBigInteger('user_id')->nullable();
                 $table->string('nama_travel');
                 $table->string('slug')->unique();
                 $table->string('layanan')->nullable();
@@ -25,6 +25,9 @@ return new class extends Migration
                 $table->string('kontak')->nullable();
                 $table->text('gambar')->nullable();
                 $table->timestamps();
+
+                $userPk = Schema::hasColumn('users', 'id_user') ? 'id_user' : 'id';
+                $table->foreign('user_id')->references($userPk)->on('users')->nullOnDelete();
             });
         }
     }

@@ -11,12 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('destinasi_travel', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('travel_id')->constrained('travels')->cascadeOnDelete();
-            $table->foreignId('destinasi_id')->constrained('destinasi')->cascadeOnDelete();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('destinasi_travel')) {
+            Schema::create('destinasi_travel', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('travel_id');
+                $table->unsignedBigInteger('destinasi_id');
+                $table->timestamps();
+
+                $table->foreign('travel_id')->references('id')->on('travels')->cascadeOnDelete();
+                $table->foreign('destinasi_id')->references('id')->on('destinasi')->cascadeOnDelete();
+            });
+        }
     }
 
     /**
