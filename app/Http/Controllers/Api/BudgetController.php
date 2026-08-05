@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\BudgetRecommendationService;
 use App\Services\DijkstraService;
+use App\Services\GoogleMapsDistanceService;
 use App\Models\TravelPlan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,13 +15,16 @@ class BudgetController extends Controller
 {
     protected BudgetRecommendationService $budgetService;
     protected DijkstraService $dijkstraService;
+    protected GoogleMapsDistanceService $googleMapsService;
 
     public function __construct(
         BudgetRecommendationService $budgetService,
-        DijkstraService $dijkstraService
+        DijkstraService $dijkstraService,
+        GoogleMapsDistanceService $googleMapsService
     ) {
         $this->budgetService   = $budgetService;
         $this->dijkstraService = $dijkstraService;
+        $this->googleMapsService = $googleMapsService;
     }
 
     /**
@@ -66,7 +70,7 @@ class BudgetController extends Controller
         $request->validate([
             'start'    => 'required|string',
             'end'      => 'required|string',
-            'budget'   => 'required|numeric',
+            'budget'   => 'nullable|numeric',
             'kategori' => 'nullable|string',
             'kota'     => 'nullable|string',
         ]);
@@ -81,11 +85,37 @@ class BudgetController extends Controller
 
         $jumlah_orang = (int) $request->input('jumlah_orang', 1);
 
+        // Tarik preferensi user aktif untuk mengurutkan prioritas destinasi dan menghitung budget default
+        $user = auth('sanctum')->user();
+        $userId = $user ? $user->id_user : null;
+        $preference = $userId ? \App\Models\UserPreference::where('id_user', $userId)->first() : null;
+
+        // Hitung budget otomatis jika tidak dikirim (atau bernilai <= 0) dari preferensi user
+        $maxBudget = (float) $request->input('budget', 0);
+        if ($maxBudget <= 0) {
+            $prefClass = $preference ? strtolower($preference->budget) : 'murah';
+            switch ($prefClass) {
+                case 'gratis':
+                    $maxBudget = 30000.0 * $jumlah_orang; // Flat bensin & parkir
+                    break;
+                case 'sedang':
+                    $maxBudget = 300000.0 * $jumlah_orang;
+                    break;
+                case 'mahal':
+                    $maxBudget = 1000000.0 * $jumlah_orang;
+                    break;
+                case 'murah':
+                default:
+                    $maxBudget = 100000.0 * $jumlah_orang;
+                    break;
+            }
+        }
+
         // 1. Dapatkan kandidat destinasi dalam budget DAN berada di dalam koridor rute (bounding box)
         $query = \App\Models\Destinasi::query();
         
         // Filter tiket per orang tidak melebihi total budget
-        $query->where('harga', '<=', $request->budget / max(1, $jumlah_orang));
+        $query->where('harga', '<=', $maxBudget / max(1, $jumlah_orang));
 
         // Filter by category if provided
         if ($request->kategori) {
@@ -122,8 +152,38 @@ class BudgetController extends Controller
             }
         }
 
-        // Ambil maksimal 50 destinasi kandidat, prioritaskan tempat gratis & murah dulu
-        $destinations = $query->orderBy('harga', 'asc')->limit(50)->get();
+        // Tarik preferensi user aktif untuk mengurutkan prioritas destinasi (Dijkstra Prioritization)
+        $user = auth('sanctum')->user();
+        $userId = $user ? $user->id_user : null;
+        $preference = $userId ? \App\Models\UserPreference::where('id_user', $userId)->first() : null;
+        
+        $orderByParts = [];
+        if ($preference) {
+            $categories = (array) $preference->minat_wisata;
+            $hiddenGem = (bool) $preference->hidden_gem;
+            
+            // Filter kategori secara KETAT jika user memilih minat wisata tertentu
+            if (!empty($categories)) {
+                $query->where(function($q) use ($categories) {
+                    foreach ($categories as $cat) {
+                        $q->orWhere('kategori', 'LIKE', '%' . $cat . '%');
+                    }
+                });
+            }
+            
+            if ($hiddenGem) {
+                $orderByParts[] = "(case when trend = 'Hidden Gem' then 1 else 0 end) DESC";
+            }
+        }
+        
+        // Selalu prioritaskan harga termurah di akhir agar hemat budget
+        $orderByParts[] = "harga ASC";
+        
+        // Terapkan pengurutan berdasarkan kecocokan preferensi
+        $query->orderByRaw(implode(", ", $orderByParts));
+
+        // Ambil maksimal 50 destinasi kandidat
+        $destinations = $query->limit(50)->get();
 
         // 2. Hitung rute waypoint menggunakan Dijkstra
         $rawRoute = $this->dijkstraService->calculateRoute(
@@ -142,8 +202,7 @@ class BudgetController extends Controller
 
         $finalRoute      = [];
         $baseCost = ($biayaMakanFlatPerTrip);
-        $maxBudget       = (float) $request->budget;
-        
+        // Gunakan $maxBudget yang telah dihitung di awal fungsi
         $accumulatedCost = $baseCost;
         if ($accumulatedCost > $maxBudget) {
             $accumulatedCost = $maxBudget;
@@ -161,21 +220,20 @@ class BudgetController extends Controller
             $distanceFromPrev = 0.0;
             $durationFromPrev = 0;
             $costTransport = 0.0;
-
+            $finalDistanceSource = 'Haversine Geographic Fallback';
             if ($index > 0) {
                 $prev = $finalRoute[count($finalRoute) - 1];
-                $distRecord = \App\Models\JarakDestinasi::where('asal_id', $prev->id)
-                    ->where('tujuan_id', $d->id)
-                    ->first();
-                if ($distRecord) {
-                    $distanceFromPrev = (double) $distRecord->jarak;
-                    $durationFromPrev = (int) $distRecord->durasi;
-                } else {
-                    $dx = (float)$d->latitude - (float)$prev->latitude;
-                    $dy = (float)$d->longitude - (float)$prev->longitude;
-                    $distanceFromPrev = sqrt($dx*$dx + $dy*$dy) * 111.0 * 1.3;
-                    $durationFromPrev = (int) ($distanceFromPrev * 60);
+                $distData = $this->googleMapsService->getDistanceAndDuration(
+                    (float)$prev->latitude, (float)$prev->longitude,
+                    (float)$d->latitude, (float)$d->longitude
+                );
+                
+                $distanceFromPrev = $distData['distance'];
+                $durationFromPrev = $distData['duration'];
+                if (isset($distData['source']) && $distData['source'] === 'osrm') {
+                    $finalDistanceSource = 'OSRM Road Routing';
                 }
+                
                 // Transportasi: 1 liter per 35 km, 1 liter = 15000
                 $costTransport = ($distanceFromPrev / 35.0) * 15000.0;
             }
@@ -219,19 +277,19 @@ class BudgetController extends Controller
                 continue;
             }
 
+            // Batasi jarak antar segmen destinasi perantara maksimal 10.0 Km agar rute tetap efisien & searah
+            if ($distanceFromPrev > 10.0) {
+                continue;
+            }
+
             // Estimasi sisa biaya perjalanan dari tempat perantara ini ke titik akhir (End Node)
             $distanceToEnd = 0.0;
             if ($endNode) {
-                $distRecordEnd = \App\Models\JarakDestinasi::where('asal_id', $d->id)
-                    ->where('tujuan_id', $endNode->id)
-                    ->first();
-                if ($distRecordEnd) {
-                    $distanceToEnd = (double) $distRecordEnd->jarak;
-                } else {
-                    $dx = (float)$endNode->latitude - (float)$d->latitude;
-                    $dy = (float)$endNode->longitude - (float)$d->longitude;
-                    $distanceToEnd = sqrt($dx*$dx + $dy*$dy) * 111.0 * 1.3;
-                }
+                $distDataEnd = $this->googleMapsService->getDistanceAndDuration(
+                    (float)$d->latitude, (float)$d->longitude,
+                    (float)$endNode->latitude, (float)$endNode->longitude
+                );
+                $distanceToEnd = $distDataEnd['distance'];
             }
             $costTransportEnd = ($distanceToEnd / 35.0) * 15000.0;
             $projectedEndCost = $costTiketEnd + $costTransportEnd;
@@ -262,13 +320,13 @@ class BudgetController extends Controller
             }
         }
 
-        $apiKey = env('GOOGLE_MAPS_API_KEY', '');
         $saranTransport = round(($totalDistance / 35.0) * 15000.0, -2);
         $saranMakanTotal = round($biayaMakanFlatPerTrip + $extraBiayaMakan, -2);
 
         return response()->json([
             'status'           => 'success',
             'route'            => $formatted,
+            'max_budget'       => (float) $maxBudget,
             'total_cost'       => round($accumulatedCost, -2),
             'remaining_budget' => max(0.0, round($maxBudget - $accumulatedCost, -2)),
             'total_nodes'      => count($finalRoute),
@@ -276,7 +334,7 @@ class BudgetController extends Controller
             'total_duration'   => $totalDuration,
             'saran_biaya_transport' => $saranTransport,
             'saran_biaya_makan'     => $saranMakanTotal,
-            'distance_source'  => !empty($apiKey) ? 'Google Maps Road API' : 'Haversine Geographic Fallback',
+            'distance_source'  => $finalDistanceSource ?? 'Haversine Geographic Fallback',
         ]);
     }
 
@@ -353,6 +411,7 @@ class BudgetController extends Controller
                 'estimasi_makan_per_orang' => $request->estimasi_makan_per_orang ?? 0,
                 'estimasi_transport_per_orang' => $request->estimasi_transport_per_orang ?? 0,
                 'schedules_json'  => $schedulesPayload,
+                'tanggal_berangkat' => !empty($schedulesPayload) ? $schedulesPayload[0]['tanggal'] : null,
                 'status'          => 'planning',
             ]);
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Services\GeminiFilterService;
 use App\Services\BudgetRecommendationService;
+use App\Services\GoogleMapsDistanceService;
 use App\Models\Destinasi;
 use Illuminate\Http\Request;
 
@@ -12,13 +13,16 @@ class RecommendationController extends Controller
 {
     protected GeminiFilterService $geminiService;
     protected BudgetRecommendationService $budgetService;
+    protected GoogleMapsDistanceService $googleMapsService;
 
     public function __construct(
         GeminiFilterService $geminiService,
-        BudgetRecommendationService $budgetService
+        BudgetRecommendationService $budgetService,
+        GoogleMapsDistanceService $googleMapsService
     ) {
         $this->geminiService = $geminiService;
         $this->budgetService = $budgetService;
+        $this->googleMapsService = $googleMapsService;
     }
 
     /**
@@ -36,7 +40,7 @@ class RecommendationController extends Controller
 
         if (empty($corpus) || count($corpus) <= 1) {
             // Fallback jika data preferensi user belum ada
-            $recommendations = Destinasi::withAvg('ratings', 'skor_rating')
+            $recommendations = Destinasi::withAvg('ratings', 'rating')
                 ->withCount('ratings')
                 ->limit(15)
                 ->get();
@@ -197,12 +201,11 @@ class RecommendationController extends Controller
             $lng = $dest ? (float)$dest->longitude : $prevLng;
             
             $dist = 0.0;
-            if ($idx === 0) {
-                if ($startDest) {
-                    $dist = $this->calculateHaversine($prevLat, $prevLng, $lat, $lng) * 1.3;
-                }
-            } else {
-                $dist = $this->calculateHaversine($prevLat, $prevLng, $lat, $lng) * 1.3;
+            $dur = 0;
+            if ($startDest || $idx > 0) {
+                $distData = $this->googleMapsService->getDistanceAndDuration($prevLat, $prevLng, $lat, $lng);
+                $dist = $distData['distance'];
+                $dur = $distData['duration'];
             }
             
             $totalJarak += $dist;
@@ -211,7 +214,7 @@ class RecommendationController extends Controller
                 'dari' => $idx === 0 ? $titikAwal : $destinasiTerpilih[$idx - 1]['nama_tempat'],
                 'ke' => $item['nama_tempat'],
                 'jarak_km' => round($dist, 2),
-                'durasi_menit' => (int)($dist * 1.5),
+                'durasi_menit' => $dur,
             ];
             
             $prevLat = $lat;

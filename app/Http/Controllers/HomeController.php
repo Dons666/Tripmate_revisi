@@ -43,7 +43,7 @@ class HomeController extends Controller
         |--------------------------------------------------------------------------
         */
         $top3Bayesian = Destinasi::query()
-            ->withAvg('ratings', 'skor_rating')
+            ->withAvg('ratings', 'rating')
             ->withCount('ratings')
             ->orderByDesc('rating_destinasi') // hasil perhitungan Bayesian Average
             ->take(3)
@@ -152,7 +152,7 @@ if ($request->filled('hidden_gem')) {
 */
 
 $destinasiPopuler = $query
-    ->withAvg('ratings', 'skor_rating')
+    ->withAvg('ratings', 'rating')
     ->withCount('ratings')
     ->inRandomOrder()
     ->limit(6)

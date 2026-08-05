@@ -19,10 +19,9 @@ class RecommendationService
             'kategori',
             'kota',
             'harga',
-            'hidden_gem',
             'fitur_cbf',
             'gambar'
-        )->withAvg('ratings', 'skor_rating')
+        )->withAvg('ratings', 'rating')
          ->withCount('ratings')
          ->paginate(12);
     }
@@ -32,7 +31,7 @@ class RecommendationService
      */
     public function getUserPreference($userId)
     {
-        return UserPreference::where('user_id', $userId)->first();
+        return UserPreference::where('id_user', $userId)->first();
     }
 
     /**
@@ -228,7 +227,7 @@ class RecommendationService
             $preference &&
             $preference->hidden_gem
         ) {
-            $query->where('hidden_gem', 1);
+            // $query->where('hidden_gem', 1);
         }
 
         $hasil = $query->get();
@@ -318,7 +317,7 @@ class RecommendationService
                 'nama_destinasi' => $document['nama_destinasi'],
                 'tokens' => preg_split(
                     '/\s+/',
-                    trim($document['fitur_cbf'])
+                    trim($document['fitur_cbf'] ?? '')
                 ),
             ];
         }
@@ -635,7 +634,7 @@ class RecommendationService
                 continue;
             }
 
-            if ($destination->hidden_gem) {
+            if (false /* $destination->hidden_gem */) {
                 $hiddenGem[] = $item;
             } else {
                 $regular[] = $item;
@@ -700,7 +699,7 @@ class RecommendationService
                 continue;
             }
 
-            if ($destinasi->hidden_gem) {
+            if (false /* $destinasi->hidden_gem */) {
                 $hiddenGem[] = $item;
             } else {
                 $normal[] = $item;
@@ -743,7 +742,7 @@ class RecommendationService
         $results = [];
 
         foreach ($topRecommendations as $recommendation) {
-            $destination = Destinasi::withAvg('ratings', 'skor_rating')
+            $destination = Destinasi::withAvg('ratings', 'rating')
                 ->withCount('ratings')
                 ->find($recommendation['id']);
 
@@ -778,7 +777,7 @@ class RecommendationService
             'id',
             'nama_destinasi',
             'fitur_cbf'
-        )->withAvg('ratings', 'skor_rating')
+        )->withAvg('ratings', 'rating')
          ->withCount('ratings')
          ->get();
 
@@ -842,10 +841,9 @@ class RecommendationService
             'kategori',
             'kota',
             'harga',
-            'hidden_gem',
             'fitur_cbf',
             'gambar'
-        )->withAvg('ratings', 'skor_rating')
+        )->withAvg('ratings', 'rating')
          ->withCount('ratings')
          ->orderByDesc('ratings_avg_skor_rating');
 

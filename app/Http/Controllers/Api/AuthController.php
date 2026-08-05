@@ -103,6 +103,60 @@ class AuthController extends Controller
             'name'  => $user->name,
             'email' => $user->email,
             'role'  => $user->role,
+            'avatar'=> $user->avatar,
+        ]);
+    }
+
+    /**
+     * Update profil user.
+     */
+    public function updateProfile(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'name' => 'sometimes|string|max:255',
+            'email' => 'sometimes|string|email|max:255|unique:users,email,' . $user->id_user . ',id_user',
+            'avatar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:10240'
+        ]);
+
+        if ($request->has('name')) {
+            $user->username = $request->name;
+        }
+
+        if ($request->has('email')) {
+            $user->email = $request->email;
+        }
+
+        if ($request->hasFile('avatar')) {
+            if ($user->gambar && \Storage::exists('public/' . $user->gambar)) {
+                \Storage::delete('public/' . $user->gambar);
+            }
+            $path = $request->file('avatar')->store('avatars', 'public');
+            $user->gambar = $path;
+            
+            // Mirror to public directory to ensure accessibility if symlink fails
+            try {
+                $targetDir = public_path('storage/avatars');
+                if (!file_exists($targetDir)) {
+                    @mkdir($targetDir, 0755, true);
+                }
+                copy(storage_path('app/public/' . $path), public_path('storage/' . $path));
+            } catch (\Exception $e) {}
+        }
+
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Profil berhasil diperbarui.',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'avatar' => $user->avatar,
+            ]
         ]);
     }
 }
