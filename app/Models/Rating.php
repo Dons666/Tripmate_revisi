@@ -13,13 +13,14 @@ class Rating extends Model
     protected $primaryKey = 'id_ulasan';
 
     protected $fillable = [
-        'id_user', 'id_wisata', 'id_penginapan', 'id_kuliner', 'komentar', 'rating', 'gambar'
+        'id_user', 'user_id', 'id_wisata', 'destinasi_id', 'id_penginapan', 'id_kuliner', 'komentar', 'rating', 'skor_rating', 'gambar'
     ];
 
     protected function casts(): array
     {
         return [
             'rating' => 'decimal:2',
+            'skor_rating' => 'decimal:2',
         ];
     }
 
@@ -33,14 +34,7 @@ class Rating extends Model
      */
     public function getDestinasiIdAttribute()
     {
-        if ($this->id_wisata) {
-            return $this->id_wisata;
-        } elseif ($this->id_kuliner) {
-            return $this->id_kuliner + 1000000;
-        } elseif ($this->id_penginapan) {
-            return $this->id_penginapan + 2000000;
-        }
-        return null;
+        return $this->attributes['destinasi_id'] ?? $this->id_wisata ?? null;
     }
 
     /**
@@ -48,6 +42,8 @@ class Rating extends Model
      */
     public function setDestinasiIdAttribute($value)
     {
+        $this->attributes['destinasi_id'] = $value;
+
         if (!$value) {
             $this->attributes['id_wisata'] = null;
             $this->attributes['id_kuliner'] = null;
@@ -76,11 +72,12 @@ class Rating extends Model
      */
     public function getSkorRatingAttribute()
     {
-        return $this->rating;
+        return $this->attributes['skor_rating'] ?? $this->attributes['rating'] ?? 0;
     }
 
     public function setSkorRatingAttribute($value)
     {
+        $this->attributes['skor_rating'] = $value;
         $this->attributes['rating'] = $value;
     }
 

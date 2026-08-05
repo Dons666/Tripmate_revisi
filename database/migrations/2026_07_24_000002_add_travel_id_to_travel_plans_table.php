@@ -12,12 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('travel_plans', function (Blueprint $table) {
-            $table->foreignId('travel_id')
-                ->nullable()
-                ->after('user_id')
-                ->constrained('travels')
-                ->nullOnDelete();
-            $table->boolean('is_checkout')->default(false)->after('status');
+            if (!Schema::hasColumn('travel_plans', 'travel_id')) {
+                $afterCol = Schema::hasColumn('travel_plans', 'id_user') ? 'id_user' : (Schema::hasColumn('travel_plans', 'user_id') ? 'user_id' : 'id_perencanaan');
+                $table->unsignedBigInteger('travel_id')->nullable()->after($afterCol);
+            }
+            if (!Schema::hasColumn('travel_plans', 'is_checkout')) {
+                $table->boolean('is_checkout')->default(false);
+            }
         });
     }
 
@@ -27,8 +28,10 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('travel_plans', function (Blueprint $table) {
-            $table->dropForeign(['travel_id']);
-            $table->dropColumn(['travel_id', 'is_checkout']);
+            $cols = array_filter(['travel_id', 'is_checkout'], fn($c) => Schema::hasColumn('travel_plans', $c));
+            if (!empty($cols)) {
+                $table->dropColumn($cols);
+            }
         });
     }
 };

@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use App\Services\GeminiFilterService;
+use Illuminate\Support\Facades\DB;
 
 
 /**
@@ -47,9 +48,9 @@ class AdminController extends Controller
      */
     public function dashboard()
     {
-        $destinationCount = Destinasi::where('tipe', 'wisata')->count();
-        $culinaryCount = Destinasi::where('tipe', 'kuliner')->count();
-        $stayCount = Destinasi::where('tipe', 'penginapan')->count();
+        $destinationCount = Schema::hasTable('wisata') && DB::table('wisata')->count() > 0 ? DB::table('wisata')->count() : Destinasi::where('tipe', 'wisata')->count();
+        $culinaryCount = Schema::hasTable('kuliner') && DB::table('kuliner')->count() > 0 ? DB::table('kuliner')->count() : Destinasi::where('tipe', 'kuliner')->count();
+        $stayCount = Schema::hasTable('penginapan') && DB::table('penginapan')->count() > 0 ? DB::table('penginapan')->count() : Destinasi::where('tipe', 'penginapan')->count();
         $totalPlaces = $destinationCount + $culinaryCount + $stayCount;
         $commentCount = Rating::count();
 
@@ -116,6 +117,21 @@ class AdminController extends Controller
             ->take(5)
             ->get();
 
+        $wisataCommentCount = Rating::whereNotNull('id_wisata')->count();
+        if ($wisataCommentCount === 0) {
+            $wisataCommentCount = Rating::whereHas('destinasi', fn($q) => $q->where('tipe', 'wisata'))->count();
+        }
+
+        $kulinerCommentCount = Rating::whereNotNull('id_kuliner')->count();
+        if ($kulinerCommentCount === 0) {
+            $kulinerCommentCount = Rating::whereHas('destinasi', fn($q) => $q->where('tipe', 'kuliner'))->count();
+        }
+
+        $penginapanCommentCount = Rating::whereNotNull('id_penginapan')->count();
+        if ($penginapanCommentCount === 0) {
+            $penginapanCommentCount = Rating::whereHas('destinasi', fn($q) => $q->where('tipe', 'penginapan'))->count();
+        }
+
         $placeTypeStats = [
             [
                 'label' => 'Destinasi Wisata',
@@ -125,7 +141,7 @@ class AdminController extends Controller
                 'bg_color' => '#f0f9ff',
                 'border_color' => '#bae6fd',
                 'place_count' => $destinationCount,
-                'comment_count' => Rating::whereHas('destinasi', fn($q) => $q->where('tipe', 'wisata'))->count(),
+                'comment_count' => $wisataCommentCount,
             ],
             [
                 'label' => 'Wisata Kuliner',
@@ -135,7 +151,7 @@ class AdminController extends Controller
                 'bg_color' => '#fff7ed',
                 'border_color' => '#ffedd5',
                 'place_count' => $culinaryCount,
-                'comment_count' => Rating::whereHas('destinasi', fn($q) => $q->where('tipe', 'kuliner'))->count(),
+                'comment_count' => $kulinerCommentCount,
             ],
             [
                 'label' => 'Penginapan',
@@ -145,7 +161,7 @@ class AdminController extends Controller
                 'bg_color' => '#ecfdf5',
                 'border_color' => '#a7f3d0',
                 'place_count' => $stayCount,
-                'comment_count' => Rating::whereHas('destinasi', fn($q) => $q->where('tipe', 'penginapan'))->count(),
+                'comment_count' => $penginapanCommentCount,
             ],
         ];
 
@@ -616,7 +632,7 @@ class AdminController extends Controller
     public function usersIndex()
     {
         return view('admin.users.index', [
-            'users' => User::orderByDesc('id')->paginate(10),
+            'users' => User::orderByDesc('id_user')->paginate(10),
             'deactivationReasons' => self::DEACTIVATION_REASONS,
         ]);
     }
@@ -812,6 +828,45 @@ class AdminController extends Controller
 
     private function queryByType(string $type)
     {
+        $tableName = match($type) {
+            'wisata' => 'wisata',
+            'kuliner' => 'kuliner',
+            'penginapan' => 'penginapan',
+            default => 'destinasi',
+        };
+
+        if (Schema::hasTable($tableName) && DB::table($tableName)->count() > 0) {
+            $pk = 'id_' . $tableName;
+            if (!Schema::hasColumn($tableName, $pk)) {
+                $pk = 'id';
+            }
+            $fkCol = 'id_' . $tableName;
+            if (!Schema::hasColumn('ratings', $fkCol)) {
+                $fkCol = 'destinasi_id';
+            }
+
+            $items = DB::table($tableName)->get();
+            return $items->map(function ($raw) use ($tableName, $type, $pk, $fkCol) {
+                $idVal = $raw->{$pk} ?? $raw->id ?? null;
+                $commentCount = DB::table('ratings')->where($fkCol, $idVal)->count();
+                $avgRating = DB::table('ratings')->where($fkCol, $idVal)->avg('rating') ?? DB::table('ratings')->where($fkCol, $idVal)->avg('skor_rating') ?? ($raw->rating ?? $raw->trend ?? 0);
+
+                $dest = new Destinasi();
+                $dest->id = $idVal;
+                $dest->nama_destinasi = $raw->nama_wisata ?? $raw->nama_kuliner ?? $raw->nama_penginapan ?? $raw->nama_destinasi ?? $raw->nama ?? '';
+                $dest->tipe = $type;
+                $dest->kota = $raw->kota ?? $raw->lokasi ?? $raw->alamat ?? '';
+                $dest->kategori = $raw->kategori ?? $raw->jenis ?? '';
+                $dest->harga = $raw->harga ?? $raw->harga_tiket ?? 0;
+                $dest->gambar = $raw->gambar ?? $raw->foto ?? null;
+                $dest->deskripsi = $raw->deskripsi ?? '';
+                $dest->ratings_count = $commentCount;
+                $dest->ratings_avg_skor_rating = (float) $avgRating;
+                $dest->exists = true;
+                return $dest;
+            });
+        }
+
         return Destinasi::where('tipe', $type)
             ->withCount('ratings')
             ->withAvg('ratings', 'skor_rating')

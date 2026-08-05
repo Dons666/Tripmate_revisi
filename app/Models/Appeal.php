@@ -9,9 +9,13 @@ class Appeal extends Model
 {
     use HasFactory;
 
+    protected $primaryKey = 'id_appeals';
+
     protected $fillable = [
         'user_id',
+        'nama',
         'email',
+        'password',
         'reason',
         'status',
         'admin_notes',
@@ -27,6 +31,6 @@ class Appeal extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id', 'id_user');
     }
 }

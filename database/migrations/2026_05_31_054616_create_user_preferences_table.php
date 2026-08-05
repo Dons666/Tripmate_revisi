@@ -11,29 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('user_preferences', function (Blueprint $table) {
-
-            $table->id();
-
-            $table->foreignId('user_id')
-                ->constrained('users')
-                ->cascadeOnDelete();
-
-            // Kota tujuan yang dipilih user
-            $table->string('kota_preferensi');
-
-            // Minat wisata (bisa lebih dari satu)
-            $table->json('minat_wisata')->nullable();
-
-            // Preferensi hidden gem
-            $table->boolean('hidden_gem')->default(false);
-
-            // Kategori harga:
-            // Gratis, Murah, Sedang, Mahal
-            $table->string('budget')->nullable();
-
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('user_preferences')) {
+            Schema::create('user_preferences', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('user_id');
+                $table->string('kota_preferensi');
+                $table->json('minat_wisata')->nullable();
+                $table->boolean('hidden_gem')->default(false);
+                $table->string('budget')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     /**

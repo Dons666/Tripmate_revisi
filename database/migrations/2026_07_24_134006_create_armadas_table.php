@@ -11,14 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('armadas', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
-            $table->string('nama_kendaraan');
-            $table->string('nomor_polisi')->nullable();
-            $table->integer('kapasitas_kursi')->default(1);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('armadas')) {
+            Schema::create('armadas', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('user_id');
+                $table->string('nama_kendaraan');
+                $table->string('nomor_polisi')->nullable();
+                $table->integer('kapasitas_kursi')->default(1);
+                $table->timestamps();
+
+                $userPk = Schema::hasColumn('users', 'id_user') ? 'id_user' : 'id';
+                $table->foreign('user_id')->references($userPk)->on('users')->cascadeOnDelete();
+            });
+        }
     }
 
     /**

@@ -9,7 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('ratings', function (Blueprint $table) {
-            $table->foreignId('travel_id')->nullable()->after('destinasi_id')->constrained('travels')->onDelete('cascade');
+            if (!Schema::hasColumn('ratings', 'travel_id')) {
+                $table->unsignedBigInteger('travel_id')->nullable();
+            }
         });
     }
 
@@ -19,8 +21,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('ratings', function (Blueprint $table) {
-            $table->dropForeign(['travel_id']);
-            $table->dropColumn('travel_id');
+            if (Schema::hasColumn('ratings', 'travel_id')) {
+                $table->dropColumn('travel_id');
+            }
         });
     }
 };

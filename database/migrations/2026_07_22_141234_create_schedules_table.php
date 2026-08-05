@@ -14,14 +14,17 @@ return new class extends Migration
         if (!Schema::hasTable('schedules')) {
             Schema::create('schedules', function (Blueprint $table) {
                 $table->id();
-                $table->foreignId('travel_plan_id')->constrained('travel_plans')->onDelete('cascade');
-                $table->foreignId('destinasi_id')->nullable()->constrained('destinasi')->nullOnDelete();
+                $table->unsignedBigInteger('travel_plan_id');
+                $table->unsignedBigInteger('destinasi_id')->nullable();
                 $table->string('judul');
                 $table->text('deskripsi')->nullable();
                 $table->date('tanggal');
                 $table->time('jam_mulai')->nullable();
                 $table->time('jam_selesai')->nullable();
                 $table->timestamps();
+
+                $planPk = Schema::hasColumn('travel_plans', 'id_perencanaan') ? 'id_perencanaan' : 'id';
+                $table->foreign('travel_plan_id')->references($planPk)->on('travel_plans')->onDelete('cascade');
             });
         }
     }

@@ -11,16 +11,21 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('appeals', function (Blueprint $table) {
-            $table->id();
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->string('email');
-            $table->text('reason');
-            $table->string('status')->default('pending'); // pending, approved, rejected
-            $table->text('admin_notes')->nullable();
-            $table->boolean('is_read')->default(false);
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('appeals')) {
+            Schema::create('appeals', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('user_id');
+                $table->string('email');
+                $table->text('reason');
+                $table->string('status')->default('pending'); // pending, approved, rejected
+                $table->text('admin_notes')->nullable();
+                $table->boolean('is_read')->default(false);
+                $table->timestamps();
+
+                $userPk = Schema::hasColumn('users', 'id_user') ? 'id_user' : 'id';
+                $table->foreign('user_id')->references($userPk)->on('users')->onDelete('cascade');
+            });
+        }
     }
 
     /**
