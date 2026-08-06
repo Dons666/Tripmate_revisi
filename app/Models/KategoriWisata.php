@@ -13,7 +13,6 @@ class KategoriWisata extends Model
 
     protected $fillable = [
         'nama_kategori',
-        'deskripsi',
     ];
 
     public function destinasi()
