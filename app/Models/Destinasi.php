@@ -11,6 +11,8 @@ class Destinasi extends Model
 
     protected $table = 'destinasi';
 
+    protected $appends = ['rating_destinasi'];
+
     protected $fillable = [
 
         // Informasi Utama
@@ -124,13 +126,18 @@ class Destinasi extends Model
     |--------------------------------------------------------------------------
     */
 
+    public function getRatingDestinasiAttribute()
+    {
+        return (float) ($this->attributes['trend'] ?? $this->average_rating ?? 0.0);
+    }
+
     public function getAverageRatingAttribute()
     {
         if (isset($this->attributes['ratings_avg_skor_rating'])) {
             return (float) $this->attributes['ratings_avg_skor_rating'];
         }
 
-        return (float) ($this->ratings()->avg('skor_rating') ?? 0);
+        return (float) ($this->ratings()->avg('rating') ?? 0);
     }
 
     public function getRatingAttribute(): float

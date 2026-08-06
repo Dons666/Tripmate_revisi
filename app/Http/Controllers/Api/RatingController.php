@@ -19,6 +19,31 @@ class RatingController extends Controller
     }
 
     /**
+     * GET /api/ratings/destinasi/{id}
+     * Ambil ulasan/rating untuk destinasi tertentu.
+     */
+    public function index(int $id)
+    {
+        $query = Rating::query();
+        $query = Rating::queryByDestinasi($query, $id);
+
+        $ratings = $query->with(['user'])
+            ->latest()
+            ->get()
+            ->map(function ($r) {
+                return [
+                    'id'          => $r->id_ulasan,
+                    'skor_rating' => (float) $r->rating,
+                    'komentar'    => $r->komentar,
+                    'user_name'   => $r->user?->name ?? 'Anonim',
+                    'created_at'  => $r->created_at?->toDateString(),
+                ];
+            });
+
+        return response()->json(['ratings' => $ratings]);
+    }
+
+    /**
      * POST /api/ratings/destinasi/{id}
      * Submit atau update rating user untuk destinasi ini (auth).
      */
