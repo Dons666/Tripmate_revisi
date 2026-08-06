@@ -18,6 +18,9 @@ class Destinasi extends Model
         'tipe',
         'kota',
         'kategori',
+        'kategori_wisata_id',
+        'kategori_penginapan_id',
+        'kategori_kuliner_id',
         'harga',
         'hidden_gem',
 
@@ -65,6 +68,21 @@ class Destinasi extends Model
     | Relationships
     |--------------------------------------------------------------------------
     */
+
+    public function kategoriWisata()
+    {
+        return $this->belongsTo(KategoriWisata::class, 'kategori_wisata_id');
+    }
+
+    public function kategoriPenginapan()
+    {
+        return $this->belongsTo(KategoriPenginapan::class, 'kategori_penginapan_id');
+    }
+
+    public function kategoriKuliner()
+    {
+        return $this->belongsTo(KategoriKuliner::class, 'kategori_kuliner_id');
+    }
 
     public function kategoris()
     {
