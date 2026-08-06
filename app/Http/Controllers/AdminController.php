@@ -71,7 +71,7 @@ class AdminController extends Controller
         $topPlaces = Destinasi::withCount('ratings')
             ->withAvg('ratings', 'rating')
             ->having('ratings_count', '>', 0)
-            ->orderByDesc('ratings_avg_skor_rating')
+            ->orderByDesc('ratings_avg_rating')
             ->orderByDesc('ratings_count')
             ->limit(3)
             ->get()
@@ -80,7 +80,7 @@ class AdminController extends Controller
                     'type' => $this->labelForType($item->tipe),
                     'type_class' => $this->classForType($item->tipe),
                     'name' => $item->name,
-                    'rating' => (float) ($item->ratings_avg_skor_rating ?? 0),
+                    'rating' => (float) ($item->ratings_avg_rating ?? $item->rating_destinasi ?? 0),
                     'comments_count' => (int) ($item->ratings_count ?? 0),
                     'detail_url' => $this->detailRouteForType($item),
                 ];

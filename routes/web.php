@@ -132,8 +132,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile',[ProfileController::class,'update'])->name('profile.update');
     Route::delete('/profile',[ProfileController::class,'destroy'])->name('profile.destroy');
     
-    // Rute Cerdas Dijkstra UI
+    // Rute Cerdas Dijkstra & Budget Planner
     Route::get('/rute-cerdas', [HomeController::class, 'dijkstra'])->name('rute.dijkstra');
+    Route::get('/budget-planner', [App\Http\Controllers\BudgetController::class, 'index'])->name('budget.index');
+    Route::post('/budget-planner/integrated-route', [App\Http\Controllers\BudgetController::class, 'integratedRoute'])->name('budget.integrated-route');
     Route::get(
     '/recommendation/debug',
         [RecommendationDebugController::class, 'index']

@@ -2,21 +2,31 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
-class Penginapan extends Destinasi
+class Penginapan extends Model
 {
-    protected $table = 'destinasi';
+    protected $table = 'penginapan';
+    protected $primaryKey = 'id_penginapan';
+    protected $guarded = [];
 
-    protected static function booted(): void
+    public function getNamaDestinasiAttribute()
     {
-        static::addGlobalScope('penginapan_type', function (Builder $builder) {
-            $builder->where('tipe', 'penginapan');
-        });
+        return $this->attributes['nama'] ?? null;
     }
 
-    public function kategoriPenginapan()
+    public function setNamaDestinasiAttribute($value)
     {
-        return $this->belongsTo(KategoriPenginapan::class, 'kategori_penginapan_id');
+        $this->attributes['nama'] = $value;
+    }
+
+    public function getKategoriAttribute()
+    {
+        return $this->attributes['kategori_penginapan'] ?? $this->attributes['tipe_penginapan'] ?? null;
+    }
+
+    public function ratings()
+    {
+        return $this->hasMany(Rating::class, 'destinasi_id', 'id_penginapan');
     }
 }

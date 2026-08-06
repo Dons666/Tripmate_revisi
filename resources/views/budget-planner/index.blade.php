@@ -148,7 +148,7 @@
                         </div>
 
                         <!-- SAVE TO TRAVEL PLAN FORM -->
-                        <form action="{{ route('budget.save-plan') }}" method="POST" class="bg-gradient-to-br from-slate-900 to-sky-950 p-6 rounded-3xl shadow-xl text-white space-y-4">
+                        <form action="{{ route('travel-plans.save-integrated-route') }}" method="POST" class="bg-gradient-to-br from-slate-900 to-sky-950 p-6 rounded-3xl shadow-xl text-white space-y-4">
                             @csrf
                             <input type="hidden" name="budget" id="saveBudgetInput">
                             <div id="saveHiddenDestinations"></div>

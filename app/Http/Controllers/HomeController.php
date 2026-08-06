@@ -29,8 +29,11 @@ class HomeController extends Controller
             return redirect()->route('travel.dashboard');
         }
 
-        // Ambil kategori
-        $kategoris = Kategori::all();
+        // Ambil kategori dari database
+        $kategoriWisata = \App\Models\KategoriWisata::orderBy('nama_kategori')->get();
+        $kategoriPenginapan = \App\Models\KategoriPenginapan::orderBy('nama_kategori')->get();
+        $kategoriKuliner = \App\Models\KategoriKuliner::orderBy('nama_kategori')->get();
+        $kategoris = $kategoriWisata;
 
         /*
         |--------------------------------------------------------------------------
@@ -250,6 +253,9 @@ $destinasiPopuler = $query
             'home',
             compact(
                 'kategoris',
+                'kategoriWisata',
+                'kategoriPenginapan',
+                'kategoriKuliner',
                 'destinasiPopuler',
                 'recommendations',
                 'top3Bayesian',

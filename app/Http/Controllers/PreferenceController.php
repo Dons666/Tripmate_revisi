@@ -10,7 +10,11 @@ class PreferenceController extends Controller
 {
     public function create()
     {
-        return view('preference.create');
+        $kategoriWisata = \App\Models\KategoriWisata::orderBy('nama_kategori')->get();
+        $kategoriPenginapan = \App\Models\KategoriPenginapan::orderBy('nama_kategori')->get();
+        $kategoriKuliner = \App\Models\KategoriKuliner::orderBy('nama_kategori')->get();
+
+        return view('preference.create', compact('kategoriWisata', 'kategoriPenginapan', 'kategoriKuliner'));
     }
 
     public function store(Request $request)
