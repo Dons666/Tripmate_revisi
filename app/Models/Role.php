@@ -30,4 +30,10 @@ class Role extends Model
         $this->attributes['id_user'] = $value;
         $this->attributes['user_id'] = $value;
     }
+
+    public function setIdUserAttribute($value)
+    {
+        $this->attributes['id_user'] = $value;
+        $this->attributes['user_id'] = $value;
+    }
 }

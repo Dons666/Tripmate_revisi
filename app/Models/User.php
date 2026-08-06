@@ -67,17 +67,17 @@ class User extends Authenticatable
 
     public function setNameAttribute($value): void
     {
-        $this->attributes['username'] = $value;
+        $this->attributes['name'] = $value;
     }
 
     public function getNameAttribute($value): string
     {
-        return (string) ($this->attributes['username'] ?? $value ?? '');
+        return (string) ($this->attributes['name'] ?? $this->attributes['username'] ?? $value ?? '');
     }
 
     public function getUsernameAttribute(): string
     {
-        return (string) ($this->attributes['username'] ?? '');
+        return (string) ($this->attributes['name'] ?? $this->attributes['username'] ?? '');
     }
 
     public function setRoleAttribute($value): void

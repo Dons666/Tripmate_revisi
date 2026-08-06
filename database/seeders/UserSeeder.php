@@ -17,7 +17,7 @@ class UserSeeder extends Seeder
         $admin = User::updateOrCreate(
             ['email' => 'admin@tripmate.com'],
             [
-                'username'  => 'Admin Tripmate',
+                'name'      => 'Admin Tripmate',
                 'password'  => Hash::make('password123'),
                 'role'      => 'admin',
                 'is_active' => true,
@@ -29,7 +29,7 @@ class UserSeeder extends Seeder
         $user = User::updateOrCreate(
             ['email' => 'user@tripmate.com'],
             [
-                'username'  => 'User Tripmate',
+                'name'      => 'User Tripmate',
                 'password'  => Hash::make('password123'),
                 'role'      => 'user',
                 'is_active' => true,
