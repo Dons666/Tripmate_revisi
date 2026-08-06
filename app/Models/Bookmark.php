@@ -10,16 +10,32 @@ class Bookmark extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id', 'destinasi_id'
+        'id_user',
+        'user_id',
+        'destinasi_id',
+        'id_wisata',
+        'id_penginapan',
+        'id_kuliner',
     ];
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'id_user', 'id_user');
     }
 
     public function destinasi()
     {
         return $this->belongsTo(Destinasi::class);
+    }
+
+    public function getUserIdAttribute()
+    {
+        return $this->attributes['id_user'] ?? $this->attributes['user_id'] ?? null;
+    }
+
+    public function setUserIdAttribute($value)
+    {
+        $this->attributes['id_user'] = $value;
+        $this->attributes['user_id'] = $value;
     }
 }
