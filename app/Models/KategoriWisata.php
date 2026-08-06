@@ -10,6 +10,7 @@ class KategoriWisata extends Model
     use HasFactory;
 
     protected $table = 'kategori_wisata';
+    protected $primaryKey = 'id_wisata';
 
     protected $fillable = [
         'nama_kategori',

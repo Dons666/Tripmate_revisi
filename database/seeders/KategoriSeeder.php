@@ -36,8 +36,7 @@ class KategoriSeeder extends Seeder
 
         foreach ($kategoriWisataList as $nama) {
             KategoriWisata::firstOrCreate(
-                ['nama_kategori' => $nama],
-                ['deskripsi' => 'Kategori tempat wisata: ' . $nama]
+                ['nama_kategori' => $nama]
             );
         }
 
@@ -55,8 +54,7 @@ class KategoriSeeder extends Seeder
 
         foreach ($kategoriPenginapanList as $nama) {
             KategoriPenginapan::firstOrCreate(
-                ['nama_kategori' => $nama],
-                ['deskripsi' => 'Kategori tempat penginapan: ' . $nama]
+                ['nama_kategori' => $nama]
             );
         }
 
@@ -77,8 +75,7 @@ class KategoriSeeder extends Seeder
 
         foreach ($kategoriKulinerList as $nama) {
             KategoriKuliner::firstOrCreate(
-                ['nama_kategori' => $nama],
-                ['deskripsi' => 'Kategori tempat kuliner: ' . $nama]
+                ['nama_kategori' => $nama]
             );
         }
 
@@ -93,31 +90,31 @@ class KategoriSeeder extends Seeder
             if ($item->tipe === 'wisata') {
                 $matched = $allWisataCat->first(fn($k) => strtolower($k->nama_kategori) === $catName);
                 if ($matched) {
-                    $item->kategori_wisata_id = $matched->id;
+                    $item->kategori_wisata_id = $matched->id_wisata;
                 } else {
                     $lainnya = $allWisataCat->first(fn($k) => strtolower($k->nama_kategori) === 'lainnya');
                     if ($lainnya) {
-                        $item->kategori_wisata_id = $lainnya->id;
+                        $item->kategori_wisata_id = $lainnya->id_wisata;
                     }
                 }
             } elseif ($item->tipe === 'penginapan') {
                 $matched = $allPenginapanCat->first(fn($k) => strtolower($k->nama_kategori) === $catName);
                 if ($matched) {
-                    $item->kategori_penginapan_id = $matched->id;
+                    $item->kategori_penginapan_id = $matched->id_penginapan;
                 } else {
                     $default = $allPenginapanCat->first(fn($k) => strtolower($k->nama_kategori) === 'penginapan');
                     if ($default) {
-                        $item->kategori_penginapan_id = $default->id;
+                        $item->kategori_penginapan_id = $default->id_penginapan;
                     }
                 }
             } elseif ($item->tipe === 'kuliner') {
                 $matched = $allKulinerCat->first(fn($k) => strtolower($k->nama_kategori) === $catName);
                 if ($matched) {
-                    $item->kategori_kuliner_id = $matched->id;
+                    $item->kategori_kuliner_id = $matched->id_kuliner;
                 } else {
                     $default = $allKulinerCat->first(fn($k) => strtolower($k->nama_kategori) === 'wisata kuliner');
                     if ($default) {
-                        $item->kategori_kuliner_id = $default->id;
+                        $item->kategori_kuliner_id = $default->id_kuliner;
                     }
                 }
             }
