@@ -15,7 +15,7 @@ return new class extends Migration
         if (!Schema::hasTable('roles')) {
             Schema::create('roles', function (Blueprint $table) {
                 $table->id();
-                $table->unsignedBigInteger('user_id');
+                $table->unsignedBigInteger('user_id')->nullable();
                 $table->string('role', 50);
                 $table->timestamps();
 
