@@ -131,7 +131,7 @@ class DestinasiController extends Controller
 
         Rating::updateOrCreate(
             [
-                'user_id' => Auth::id(),
+                'id_user' => Auth::id(),
                 'destinasi_id' => $id,
             ],
             $ratingData

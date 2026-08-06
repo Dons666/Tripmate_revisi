@@ -59,7 +59,7 @@ class RatingController extends Controller
         if ($type === 'destination') {
             Rating::updateOrCreate(
                 [
-                    'user_id' => Auth::id(),
+                    'id_user' => Auth::id(),
                     'destinasi_id' => $id,
                 ],
                 $ratingData
@@ -68,7 +68,7 @@ class RatingController extends Controller
         } else {
             Rating::updateOrCreate(
                 [
-                    'user_id' => Auth::id(),
+                    'id_user' => Auth::id(),
                     'travel_id' => $id,
                 ],
                 $ratingData

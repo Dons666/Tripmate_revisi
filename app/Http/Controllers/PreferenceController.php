@@ -23,7 +23,7 @@ class PreferenceController extends Controller
 
         UserPreference::updateOrCreate(
             [
-                'user_id' => Auth::id()
+                'id_user' => Auth::id()
             ],
             [
                 'kota_preferensi' => $request->kota_preferensi,

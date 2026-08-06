@@ -157,6 +157,11 @@ class User extends Authenticatable
         return $this->hasOne(UserPreference::class, 'id_user', 'id_user');
     }
 
+    public function notifications()
+    {
+        return $this->hasMany(UserNotification::class, 'id_user', 'id_user');
+    }
+
     public function ratings()
     {
         return $this->hasMany(Rating::class, 'id_user', 'id_user');

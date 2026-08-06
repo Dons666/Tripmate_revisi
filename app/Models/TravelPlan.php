@@ -54,6 +54,17 @@ class TravelPlan extends Model
         return $this->tanggal_berangkat;
     }
 
+    public function getUserIdAttribute()
+    {
+        return $this->attributes['id_user'] ?? $this->attributes['user_id'] ?? null;
+    }
+
+    public function setUserIdAttribute($value)
+    {
+        $this->attributes['id_user'] = $value;
+        $this->attributes['user_id'] = $value;
+    }
+
     public function setTanggalMulaiAttribute($value)
     {
         $this->attributes['tanggal_berangkat'] = $value;
