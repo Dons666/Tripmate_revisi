@@ -19,12 +19,6 @@
                     <a href="{{ route('admin.places.index') }}" class="px-3.5 py-2 rounded-lg text-xs font-extrabold text-slate-700 hover:text-sky-600 hover:bg-sky-50 transition {{ request()->routeIs('admin.places.*') ? 'bg-sky-50 text-sky-600 font-black' : '' }}">
                         📍 Kelola Tempat
                     </a>
-                    <a href="{{ route('admin.penyedia-travel.index') }}" class="px-3.5 py-2 rounded-lg text-xs font-extrabold text-slate-700 hover:text-sky-600 hover:bg-sky-50 transition {{ request()->routeIs('admin.penyedia-travel.*') ? 'bg-sky-50 text-sky-600 font-black' : '' }}">
-                        🚌 Penyedia Travel
-                    </a>
-                    <a href="{{ route('admin.escrow.index') }}" class="px-3.5 py-2 rounded-lg text-xs font-extrabold text-slate-700 hover:text-sky-600 hover:bg-sky-50 transition {{ request()->routeIs('admin.escrow.*') ? 'bg-sky-50 text-sky-600 font-black' : '' }}">
-                        🛡️ Escrow
-                    </a>
                     <a href="{{ route('admin.users.index') }}" class="px-3.5 py-2 rounded-lg text-xs font-extrabold text-slate-700 hover:text-sky-600 hover:bg-sky-50 transition {{ request()->routeIs('admin.users.*') ? 'bg-sky-50 text-sky-600 font-black' : '' }}">
                         👥 Users
                     </a>

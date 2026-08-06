@@ -98,22 +98,41 @@
 
         <option value="">Semua Kategori</option>
 
-        @foreach($kategoris as $kat)
+        @if(isset($kategoriWisata) && count($kategoriWisata) > 0)
+            <optgroup label="🌴 Wisata">
+                @foreach($kategoriWisata as $kat)
+                    <option
+                        value="{{ $kat->nama_kategori }}"
+                        {{ request('kategori') == $kat->nama_kategori ? 'selected' : '' }}>
+                        {{ $kat->nama_kategori }}
+                    </option>
+                @endforeach
+            </optgroup>
+        @endif
 
-            <option
-                value="{{ $kat->nama_kategori }}"
-                {{ request('kategori') == $kat->nama_kategori ? 'selected' : '' }}>
+        @if(isset($kategoriKuliner) && count($kategoriKuliner) > 0)
+            <optgroup label="🍜 Wisata Kuliner">
+                @foreach($kategoriKuliner as $kat)
+                    <option
+                        value="{{ $kat->nama_kategori }}"
+                        {{ request('kategori') == $kat->nama_kategori ? 'selected' : '' }}>
+                        {{ $kat->nama_kategori }}
+                    </option>
+                @endforeach
+            </optgroup>
+        @endif
 
-                {{ $kat->nama_kategori }}
-
-            </option>
-
-        @endforeach
-
-       <!-- Kategori Penginapan -->
-<option value="Penginapan" {{ request('kategori') == 'Penginapan' ? 'selected' : '' }}>
-    Penginapan
-</option>
+        @if(isset($kategoriPenginapan) && count($kategoriPenginapan) > 0)
+            <optgroup label="🏨 Penginapan">
+                @foreach($kategoriPenginapan as $kat)
+                    <option
+                        value="{{ $kat->nama_kategori }}"
+                        {{ request('kategori') == $kat->nama_kategori ? 'selected' : '' }}>
+                        {{ $kat->nama_kategori }}
+                    </option>
+                @endforeach
+            </optgroup>
+        @endif
 
     </select>
 

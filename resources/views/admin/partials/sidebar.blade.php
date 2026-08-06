@@ -40,8 +40,6 @@
     <div class="menu">
         <a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}"><span>📊 Home</span></a>
         <a href="{{ route('admin.places.index') }}" class="{{ request()->routeIs('admin.places.*') ? 'active' : '' }}"><span>📍 Manage Tempat</span></a>
-        <a href="{{ route('admin.penyedia-travel.index') }}" class="{{ request()->routeIs('admin.penyedia-travel.*') ? 'active' : '' }}"><span>🚌 Kelola Travel</span></a>
-        <a href="{{ route('admin.escrow.index') }}" class="{{ request()->routeIs('admin.escrow.*') ? 'active' : '' }}"><span>💸 Escrow & Payout</span></a>
         <a href="{{ route('admin.comments.index') }}" class="{{ request()->routeIs('admin.comments.*') ? 'active' : '' }}"><span>💬 Manage Komentar</span></a>
         <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }}"><span>👥 Manage Member</span></a>
         <a href="{{ route('admin.appeals.index') }}" class="{{ request()->routeIs('admin.appeals.*') ? 'active' : '' }}">

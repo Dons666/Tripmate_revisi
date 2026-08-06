@@ -24,7 +24,12 @@ class BudgetRecommendationService
 
         // Filter kategori (partial match)
         if ($kategori) {
-            $query->where('kategori', 'LIKE', '%' . $kategori . '%');
+            $query->where(function($q) use ($kategori) {
+                $q->where('kategori', 'LIKE', '%' . $kategori . '%')
+                  ->orWhereHas('kategoriWisata', fn($kw) => $kw->where('nama_kategori', 'LIKE', '%' . $kategori . '%'))
+                  ->orWhereHas('kategoriPenginapan', fn($kp) => $kp->where('nama_kategori', 'LIKE', '%' . $kategori . '%'))
+                  ->orWhereHas('kategoriKuliner', fn($kk) => $kk->where('nama_kategori', 'LIKE', '%' . $kategori . '%'));
+            });
         }
 
         // Filter kota (partial match)

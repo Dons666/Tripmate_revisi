@@ -86,27 +86,30 @@
 
     <!-- Quick Tags -->
     <div class="flex flex-wrap gap-3 mt-5">
-
-        <a href="{{ route('destinasi.search',['kategori'=>'Wisata Alam']) }}"
-            class="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full text-sm hover:bg-white/30">
-            Wisata Alam
-        </a>
-
-        <a href="{{ route('destinasi.search',['kategori'=>'Wisata Budaya']) }}"
-            class="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full text-sm hover:bg-white/30">
-            Budaya
-        </a>
-
-        <a href="{{ route('destinasi.search',['kategori'=>'Wisata Kuliner']) }}"
-            class="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full text-sm hover:bg-white/30">
-            Kuliner
-        </a>
-
-        <a href="{{ route('destinasi.search',['hidden_gem'=>1]) }}"
-            class="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full text-sm hover:bg-white/30">
+        @if(isset($kategoriWisata))
+            @foreach($kategoriWisata->take(3) as $kat)
+                <a href="{{ route('destinasi.search', ['kategori' => $kat->nama_kategori]) }}"
+                    class="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full text-sm hover:bg-white/30 transition">
+                    {{ $kat->nama_kategori }}
+                </a>
+            @endforeach
+        @endif
+        @if(isset($kategoriKuliner) && $kategoriKuliner->first())
+            <a href="{{ route('destinasi.search', ['kategori' => $kategoriKuliner->first()->nama_kategori]) }}"
+                class="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full text-sm hover:bg-white/30 transition">
+                Kuliner
+            </a>
+        @endif
+        @if(isset($kategoriPenginapan) && $kategoriPenginapan->first())
+            <a href="{{ route('destinasi.search', ['kategori' => $kategoriPenginapan->first()->nama_kategori]) }}"
+                class="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full text-sm hover:bg-white/30 transition">
+                Penginapan
+            </a>
+        @endif
+        <a href="{{ route('destinasi.search', ['hidden_gem' => 1]) }}"
+            class="bg-white/20 backdrop-blur text-white px-4 py-2 rounded-full text-sm hover:bg-white/30 transition">
             Hidden Gems
         </a>
-
     </div>
 
 </div>

@@ -42,8 +42,18 @@ class DestinasiController extends Controller
             $query->where('kota', $request->kota);
         }
 
+        if ($request->filled('tipe')) {
+            $query->where('tipe', $request->tipe);
+        }
+
         if ($request->filled('kategori')) {
-            $query->where('kategori', $request->kategori);
+            $category = $request->kategori;
+            $query->where(function($q) use ($category) {
+                $q->where('kategori', $category)
+                  ->orWhereHas('kategoriWisata', fn($kw) => $kw->where('nama_kategori', $category))
+                  ->orWhereHas('kategoriPenginapan', fn($kp) => $kp->where('nama_kategori', $category))
+                  ->orWhereHas('kategoriKuliner', fn($kk) => $kk->where('nama_kategori', $category));
+            });
         }
 
         if ($request->filled('harga_min')) {
@@ -52,15 +62,21 @@ class DestinasiController extends Controller
         if ($request->filled('harga_max')) {
             $query->where('harga', '<=', $request->harga_max);
         }
+        if ($request->filled('hidden_gem')) {
+            $query->where('hidden_gem', 1);
+        }
 
         $destinasis = $query
             ->withAvg('ratings', 'rating')
             ->withCount('ratings')
             ->paginate(12);
-        $kotas = Destinasi::select('kota')->distinct()->orderBy('kota')->get();
-        $kategoris = Kategori::all();
+        $kotas = Destinasi::select('kota')->distinct()->whereNotNull('kota')->orderBy('kota')->get();
 
-        return view('destinasi.search', compact('destinasis', 'kotas', 'kategoris'));
+        $kategoriWisata = \App\Models\KategoriWisata::orderBy('nama_kategori')->get();
+        $kategoriPenginapan = \App\Models\KategoriPenginapan::orderBy('nama_kategori')->get();
+        $kategoriKuliner = \App\Models\KategoriKuliner::orderBy('nama_kategori')->get();
+
+        return view('destinasi.search', compact('destinasis', 'kotas', 'kategoriWisata', 'kategoriPenginapan', 'kategoriKuliner'));
     }
 
     // Halaman Detail Destinasi
@@ -131,7 +147,7 @@ class DestinasiController extends Controller
 
         Rating::updateOrCreate(
             [
-                'user_id' => Auth::id(),
+                'id_user' => Auth::id(),
                 'destinasi_id' => $id,
             ],
             $ratingData

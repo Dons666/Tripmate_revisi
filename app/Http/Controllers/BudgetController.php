@@ -29,11 +29,19 @@ class BudgetController extends Controller
      */
     public function index()
     {
-        $kategoris   = Kategori::all();
+        $kategoriWisata = \App\Models\KategoriWisata::orderBy('nama_kategori')->pluck('nama_kategori');
+        $kategoriPenginapan = \App\Models\KategoriPenginapan::orderBy('nama_kategori')->pluck('nama_kategori');
+        $kategoriKuliner = \App\Models\KategoriKuliner::orderBy('nama_kategori')->pluck('nama_kategori');
+        $kategoriList = $kategoriWisata->concat($kategoriPenginapan)->concat($kategoriKuliner)->unique()->values();
+
         $kotas       = Destinasi::distinct()->pluck('kota')->filter()->values();
         $destinasis  = Destinasi::orderBy('nama_destinasi')->get(['id', 'nama_destinasi', 'kota', 'kategori', 'harga']);
 
-        return view('budget-planner.index', compact('kategoris', 'kotas', 'destinasis'));
+        return view('budget-planner.index', [
+            'kategoris'  => $kategoriList->map(fn($item) => (object)['nama_kategori' => $item]),
+            'kotas'      => $kotas,
+            'destinasis' => $destinasis,
+        ]);
     }
 
     /**

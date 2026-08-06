@@ -137,52 +137,95 @@
                     <section class="border rounded-3xl p-6">
 
                         <h2 class="text-2xl font-bold text-slate-900 mb-2">
-                            2. Minat Wisata
+                            2. Minat Wisata & Kategori Tempat
                         </h2>
 
                         <p class="text-slate-500 mb-6">
-                            Pilih satu atau lebih kategori wisata yang Anda sukai.
+                            Pilih satu atau lebih kategori wisata, kuliner, atau penginapan yang Anda sukai.
                         </p>
 
-                        <div class="grid md:grid-cols-3 gap-4">
+                        <!-- Wisata -->
+                        <div class="mb-6">
+                            <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <span>🌴</span> Destinasi Wisata
+                            </h3>
+                            <div class="grid md:grid-cols-3 gap-4">
+                                @php
+                                    $wisataList = isset($kategoriWisata) ? $kategoriWisata : \App\Models\KategoriWisata::orderBy('nama_kategori')->get();
+                                @endphp
+                                @foreach($wisataList as $kat)
+                                    <label class="cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            name="minat_wisata[]"
+                                            value="{{ $kat->nama_kategori }}"
+                                            class="peer hidden">
 
-                            @foreach([
-                        'Wisata Alam',
-                        'Wisata Budaya',
-                        'Wisata Sejarah',
-                        'Wisata Edukasi',
-                        'Wisata Religi',
-                        'Wisata Bahari',
-                        'Wisata Kuliner',
-                        'Wisata Buatan',
-                        'Taman Hiburan',
-                        'Desa Wisata',
-                        'Agrowisata',
-                        'Ekowisata',
-                        'Penginapan'
-                    ] as $minat)
-                    
-                            <label class="cursor-pointer">
+                                        <div class="border rounded-2xl p-4 text-center font-medium 
+                                                    peer-checked:bg-sky-600
+                                                    peer-checked:text-white
+                                                    peer-checked:border-sky-600 transition hover:border-sky-300">
+                                            {{ $kat->nama_kategori }}
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
 
-                                <input
-                                    type="checkbox"
-                                    name="minat_wisata[]"
-                                    value="{{ $minat }}"
-                                    class="peer hidden">
+                        <!-- Kuliner -->
+                        <div class="mb-6">
+                            <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <span>🍜</span> Wisata Kuliner
+                            </h3>
+                            <div class="grid md:grid-cols-3 gap-4">
+                                @php
+                                    $kulinerList = isset($kategoriKuliner) ? $kategoriKuliner : \App\Models\KategoriKuliner::orderBy('nama_kategori')->get();
+                                @endphp
+                                @foreach($kulinerList as $kat)
+                                    <label class="cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            name="minat_wisata[]"
+                                            value="{{ $kat->nama_kategori }}"
+                                            class="peer hidden">
 
-                                <div class="border rounded-2xl p-4 text-center font-medium 
-                                            peer-checked:bg-sky-600
-                                            peer-checked:text-white
-                                            peer-checked:border-sky-600">
+                                        <div class="border rounded-2xl p-4 text-center font-medium 
+                                                    peer-checked:bg-amber-600
+                                                    peer-checked:text-white
+                                                    peer-checked:border-amber-600 transition hover:border-amber-300">
+                                            {{ $kat->nama_kategori }}
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
 
-                                    {{ $minat }}
+                        <!-- Penginapan -->
+                        <div>
+                            <h3 class="font-bold text-slate-800 mb-3 flex items-center gap-2">
+                                <span>🏨</span> Penginapan
+                            </h3>
+                            <div class="grid md:grid-cols-3 gap-4">
+                                @php
+                                    $penginapanList = isset($kategoriPenginapan) ? $kategoriPenginapan : \App\Models\KategoriPenginapan::orderBy('nama_kategori')->get();
+                                @endphp
+                                @foreach($penginapanList as $kat)
+                                    <label class="cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            name="minat_wisata[]"
+                                            value="{{ $kat->nama_kategori }}"
+                                            class="peer hidden">
 
-                                </div>
-
-                            </label>
-
-                            @endforeach
-
+                                        <div class="border rounded-2xl p-4 text-center font-medium 
+                                                    peer-checked:bg-emerald-600
+                                                    peer-checked:text-white
+                                                    peer-checked:border-emerald-600 transition hover:border-emerald-300">
+                                            {{ $kat->nama_kategori }}
+                                        </div>
+                                    </label>
+                                @endforeach
+                            </div>
                         </div>
 
                     </section>
