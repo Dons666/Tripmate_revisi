@@ -90,31 +90,31 @@ class KategoriSeeder extends Seeder
             if ($item->tipe === 'wisata') {
                 $matched = $allWisataCat->first(fn($k) => strtolower($k->nama_kategori) === $catName);
                 if ($matched) {
-                    $item->kategori_wisata_id = $matched->id_wisata;
+                    $item->kategori_wisata_id = $matched->id_kategori_wisata;
                 } else {
                     $lainnya = $allWisataCat->first(fn($k) => strtolower($k->nama_kategori) === 'lainnya');
                     if ($lainnya) {
-                        $item->kategori_wisata_id = $lainnya->id_wisata;
+                        $item->kategori_wisata_id = $lainnya->id_kategori_wisata;
                     }
                 }
             } elseif ($item->tipe === 'penginapan') {
                 $matched = $allPenginapanCat->first(fn($k) => strtolower($k->nama_kategori) === $catName);
                 if ($matched) {
-                    $item->kategori_penginapan_id = $matched->id_penginapan;
+                    $item->kategori_penginapan_id = $matched->id_kategori_penginapan;
                 } else {
                     $default = $allPenginapanCat->first(fn($k) => strtolower($k->nama_kategori) === 'penginapan');
                     if ($default) {
-                        $item->kategori_penginapan_id = $default->id_penginapan;
+                        $item->kategori_penginapan_id = $default->id_kategori_penginapan;
                     }
                 }
             } elseif ($item->tipe === 'kuliner') {
                 $matched = $allKulinerCat->first(fn($k) => strtolower($k->nama_kategori) === $catName);
                 if ($matched) {
-                    $item->kategori_kuliner_id = $matched->id_kuliner;
+                    $item->kategori_kuliner_id = $matched->id_kategori_kuliner;
                 } else {
                     $default = $allKulinerCat->first(fn($k) => strtolower($k->nama_kategori) === 'wisata kuliner');
                     if ($default) {
-                        $item->kategori_kuliner_id = $default->id_kuliner;
+                        $item->kategori_kuliner_id = $default->id_kategori_kuliner;
                     }
                 }
             }
