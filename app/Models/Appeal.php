@@ -12,6 +12,7 @@ class Appeal extends Model
     protected $primaryKey = 'id_appeals';
 
     protected $fillable = [
+        'id_user',
         'user_id',
         'nama',
         'email',
@@ -31,6 +32,17 @@ class Appeal extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'user_id', 'id_user');
+        return $this->belongsTo(User::class, 'id_user', 'id_user');
+    }
+
+    public function getUserIdAttribute()
+    {
+        return $this->attributes['id_user'] ?? $this->attributes['user_id'] ?? null;
+    }
+
+    public function setUserIdAttribute($value)
+    {
+        $this->attributes['id_user'] = $value;
+        $this->attributes['user_id'] = $value;
     }
 }

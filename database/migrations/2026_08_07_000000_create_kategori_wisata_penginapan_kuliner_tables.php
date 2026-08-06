@@ -13,21 +13,21 @@ return new class extends Migration
     {
         // 1. Tabel Kategori Wisata
         Schema::create('kategori_wisata', function (Blueprint $table) {
-            $table->id();
+            $table->id('id_wisata');
             $table->string('nama_kategori')->unique();
             $table->timestamps();
         });
 
         // 2. Tabel Kategori Penginapan
         Schema::create('kategori_penginapan', function (Blueprint $table) {
-            $table->id();
+            $table->id('id_penginapan');
             $table->string('nama_kategori')->unique();
             $table->timestamps();
         });
 
         // 3. Tabel Kategori Kuliner
         Schema::create('kategori_kuliner', function (Blueprint $table) {
-            $table->id();
+            $table->id('id_kuliner');
             $table->string('nama_kategori')->unique();
             $table->timestamps();
         });
@@ -37,19 +37,19 @@ return new class extends Migration
             $table->foreignId('kategori_wisata_id')
                 ->nullable()
                 ->after('kategori')
-                ->constrained('kategori_wisata')
+                ->constrained('kategori_wisata', 'id_wisata')
                 ->nullOnDelete();
 
             $table->foreignId('kategori_penginapan_id')
                 ->nullable()
                 ->after('kategori_wisata_id')
-                ->constrained('kategori_penginapan')
+                ->constrained('kategori_penginapan', 'id_penginapan')
                 ->nullOnDelete();
 
             $table->foreignId('kategori_kuliner_id')
                 ->nullable()
                 ->after('kategori_penginapan_id')
-                ->constrained('kategori_kuliner')
+                ->constrained('kategori_kuliner', 'id_kuliner')
                 ->nullOnDelete();
         });
     }

@@ -57,7 +57,7 @@ class User extends Authenticatable
 
     public function roles()
     {
-        return $this->hasMany(Role::class, 'user_id', $this->getKeyName());
+        return $this->hasMany(Role::class, 'id_user', 'id_user');
     }
 
     public function getIdAttribute()
@@ -169,12 +169,12 @@ class User extends Authenticatable
 
     public function bookmarks()
     {
-        return $this->hasMany(Bookmark::class, 'user_id', 'id_user');
+        return $this->hasMany(Bookmark::class, 'id_user', 'id_user');
     }
 
     public function searchHistories()
     {
-        return $this->hasMany(SearchHistory::class, 'user_id', 'id_user');
+        return $this->hasMany(SearchHistory::class, 'id_user', 'id_user');
     }
 
     public function isAdmin(): bool
@@ -208,7 +208,7 @@ class User extends Authenticatable
 
     public function expenses()
     {
-        return $this->hasMany(Expense::class, 'user_id', 'id_user');
+        return $this->hasMany(Expense::class, 'id_user', 'id_user');
     }
 
     public function travelPlans()
@@ -218,6 +218,6 @@ class User extends Authenticatable
 
     public function armadas()
     {
-        return $this->hasMany(Armada::class, 'user_id', 'id_user');
+        return $this->hasMany(Armada::class, 'id_user', 'id_user');
     }
 }
