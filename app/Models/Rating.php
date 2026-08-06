@@ -193,5 +193,10 @@ class Rating extends Model
                 'trend' => $bayesianAvg
             ]);
         }
+
+        // Juga update tabel destinasi utama (rating_destinasi)
+        DB::table('destinasi')->where('id', $id)->update([
+            'rating_destinasi' => $bayesianAvg
+        ]);
     }
 }

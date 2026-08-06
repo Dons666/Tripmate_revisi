@@ -76,4 +76,76 @@ class GeminiFilterService
             ['nama_tempat' => "Puncak Pandangan {$kota}", 'estimasi_biaya' => 25000],
         ];
     }
+
+    /**
+     * Moderasi komentar/review dengan Gemini AI, fallback ke local filter jika error/offline.
+     */
+    public function analyzeComment(string $comment): array
+    {
+        $prompt = "Lakukan moderasi konten pada komentar berikut. Periksa apakah komentar ini aman (tidak mengandung ujaran kebencian, sara, pornografi, pelecehan, spam, atau kata-kata kasar/kotor ekstrem).\n\n" .
+                  "Komentar: \"{$comment}\"\n\n" .
+                  "Respon HARUS HANYA berupa JSON valid tanpa format markdown dengan format berikut:\n" .
+                  "{\"is_safe\": true/false, \"reason\": \"Alasan pemblokiran (jika tidak aman, kosongkan jika aman)\"}\n" .
+                  "PENTING: Jangan berikan teks penjelasan lain, hanya JSON saja.";
+
+        $models = [
+            'gemini-2.5-flash',
+            'gemini-2.0-flash',
+            'gemini-1.5-flash'
+        ];
+
+        if (!empty($this->apiKey)) {
+            foreach ($models as $modelName) {
+                try {
+                    $url = "https://generativelanguage.googleapis.com/v1beta/models/{$modelName}:generateContent?key={$this->apiKey}";
+
+                    $response = Http::retry(2, 500)
+                        ->withHeaders(['Content-Type' => 'application/json'])
+                        ->post($url, [
+                            'contents' => [
+                                ['parts' => [['text' => $prompt]]]
+                            ]
+                        ]);
+
+                    if ($response->successful()) {
+                        $text = $response->json('candidates.0.content.parts.0.text');
+
+                        if ($text) {
+                            $cleanJson = preg_replace('/^```json\s*|\s*```$/m', '', trim($text));
+                            $data = json_decode($cleanJson, true);
+
+                            if (is_array($data) && isset($data['is_safe'])) {
+                                return [
+                                    'is_safe' => (bool)$data['is_safe'],
+                                    'reason'  => $data['reason'] ?? null,
+                                ];
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::error("Gemini Exception in analyzeComment ({$modelName}): " . $e->getMessage());
+                }
+            }
+        }
+
+        // Fallback local moderation if Gemini fails/API key missing
+        $badWords = ['anjing', 'bangsat', 'babi', 'goblok', 'tolol', 'kntl', 'kontol', 'memek', 'ngentot', 'asoe'];
+        $isSafe = true;
+        $reason = null;
+
+        $lowerComment = strtolower($comment);
+        foreach ($badWords as $word) {
+            if (str_contains($lowerComment, $word)) {
+                $isSafe = false;
+                $reason = "Mengandung kata kasar: {$word}";
+                break;
+            }
+        }
+
+        return [
+            'is_safe' => $isSafe,
+            'reason'  => $reason
+        ];
+    }
 }
+

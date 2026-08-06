@@ -73,7 +73,7 @@ class RatingController extends Controller
                 ],
                 $ratingData
             );
-            $average = Rating::where('travel_id', $id)->avg('skor_rating') ?? 5.0;
+            $average = Rating::where('travel_id', $id)->avg('rating') ?? 5.0;
             \App\Models\Travel::where('id', $id)->update(['rating' => $average]);
         }
 
