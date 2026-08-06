@@ -15,7 +15,6 @@ return new class extends Migration
         Schema::create('kategori_wisata', function (Blueprint $table) {
             $table->id();
             $table->string('nama_kategori')->unique();
-            $table->text('deskripsi')->nullable();
             $table->timestamps();
         });
 
@@ -23,7 +22,6 @@ return new class extends Migration
         Schema::create('kategori_penginapan', function (Blueprint $table) {
             $table->id();
             $table->string('nama_kategori')->unique();
-            $table->text('deskripsi')->nullable();
             $table->timestamps();
         });
 
@@ -31,7 +29,6 @@ return new class extends Migration
         Schema::create('kategori_kuliner', function (Blueprint $table) {
             $table->id();
             $table->string('nama_kategori')->unique();
-            $table->text('deskripsi')->nullable();
             $table->timestamps();
         });
 
