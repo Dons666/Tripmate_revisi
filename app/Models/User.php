@@ -11,8 +11,6 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    protected $primaryKey = 'id_user';
-
     protected ?string $pendingRole = null;
 
     protected $fillable = [
@@ -58,11 +56,6 @@ class User extends Authenticatable
     public function roles()
     {
         return $this->hasMany(Role::class, 'id_user', 'id_user');
-    }
-
-    public function getIdAttribute()
-    {
-        return $this->attributes['id_user'] ?? $this->attributes['id'] ?? $this->getKey();
     }
 
     public function setNameAttribute($value): void

@@ -9,8 +9,6 @@ class Appeal extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'id_appeals';
-
     protected $fillable = [
         'id_user',
         'user_id',

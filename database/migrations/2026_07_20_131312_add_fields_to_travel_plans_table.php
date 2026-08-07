@@ -16,7 +16,7 @@ return new class extends Migration
                 $table->text('catatan')->nullable()->after('tujuan');
             }
             if (!Schema::hasColumn('travel_plans', 'status')) {
-                $table->string('status')->default('Perencanaan Aktif')->after('budget');
+                $table->string('status')->default('Perencanaan Aktif');
             }
             if (!Schema::hasColumn('travel_plans', 'foto_sampul')) {
                 $table->string('foto_sampul')->nullable()->after('status');

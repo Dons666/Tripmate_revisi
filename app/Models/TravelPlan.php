@@ -6,8 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 
 class TravelPlan extends Model
 {
-    protected $primaryKey = 'id_perencanaan';
-
     protected $fillable = [
         'id_user',
         'travel_id',

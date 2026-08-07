@@ -10,8 +10,6 @@ class Rating extends Model
 {
     use HasFactory;
 
-    protected $primaryKey = 'id_ulasan';
-
     protected $fillable = [
         'id_user', 'user_id', 'id_wisata', 'destinasi_id', 'id_penginapan', 'id_kuliner', 'komentar', 'rating', 'skor_rating', 'gambar'
     ];

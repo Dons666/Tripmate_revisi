@@ -11,8 +11,6 @@ class UserPreference extends Model
 
     protected $table = 'user_preferences';
 
-    protected $primaryKey = 'id_user_preferences';
-
     protected $fillable = [
         'id_user',
         'kota_preferensi',

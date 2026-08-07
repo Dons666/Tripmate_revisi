@@ -8,8 +8,6 @@ class UserNotification extends Model
 {
     protected $table = 'user_notifications';
 
-    protected $primaryKey = 'id_user_notifications';
-
     protected $fillable = [
         'id_user',
         'user_id',

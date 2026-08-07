@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('travel_plans', function (Blueprint $table) {
             if (!Schema::hasColumn('travel_plans', 'total_cost')) {
-                $table->decimal('total_cost', 15, 2)->default(0.00)->after('budget');
+                $table->decimal('total_cost', 15, 2)->default(0.00);
             }
             if (!Schema::hasColumn('travel_plans', 'estimasi_makan_per_orang')) {
                 $table->decimal('estimasi_makan_per_orang', 15, 2)->default(0.00)->after('total_cost');

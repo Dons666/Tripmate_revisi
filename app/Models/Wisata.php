@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 class Wisata extends Model
 {
     protected $table = 'wisata';
-    protected $primaryKey = 'id_wisata';
     protected $guarded = [];
 
     public function getNamaDestinasiAttribute()
